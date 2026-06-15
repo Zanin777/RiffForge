@@ -24,9 +24,9 @@ Faça sempre esses 4 passos, em ordem:
 ### Semana 1 — Fundação e primeiro JSON
 
 **Sessão 1 — Esqueleto Spring Boot**
-- [ ] Gerar o projeto no [Spring Initializr](https://start.spring.io/) (Maven, Java 17, dependência **Spring Web**).
-- [ ] Extrair por cima do repo e rodar.
-- [ ] ✅ *Feito quando:* aparece o banner do Spring e `Tomcat started on port 8080`.
+- [x] Gerar o projeto no [Spring Initializr](https://start.spring.io/) (Maven, Java 17, dependência **Spring Web**).
+- [x] Extrair por cima do repo e rodar.
+- [x] ✅ *Feito quando:* aparece o banner do Spring e `Tomcat started on port 8080`.
 
 **Sessão 2 — Modelo de dados**
 - [ ] Criar os pacotes `model`, `dto`, `controller`.
