@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="RiffForge — forje riffs, tablaturas e estruturas de metal com IA. Afinações graves, do Death ao Djent, em segundos.">
+<title>RiffForge — Forja sonora movida por IA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --void:      #080605;
+    --iron-950:  #0d0a08;
+    --iron-900:  #120d0a;
+    --iron-850:  #181210;
+    --iron-800:  #1e1714;
+    --iron-700:  #2a211b;
+    --iron-600:  #382c24;
+    --line:        rgba(255,255,255,0.06);
+    --line-strong: rgba(255,255,255,0.12);
+    --ash:       #ece6dd;
+    --ash-dim:   #a39a8e;
+    --ash-faint: #6b6258;
+    --ember:     #c0341a;
+    --flame:     #f0641a;
+    --spark:     #fbb024;
+    --heat: linear-gradient(100deg, #c0341a 0%, #f0641a 55%, #fbb024 100%);
+
+    --r:    12px;
+    --r-sm: 9px;
+    --maxw: 1180px;
+
+    --display: "Oswald", system-ui, sans-serif;
+    --body: "Archivo", system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--iron-950);
+    color: var(--ash);
+    font-family: var(--body);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* ---- Fundo desenhado: grão + brasas + glow de fornalha ---- */
+  .bg-fx {
+    position: fixed; inset: 0; z-index: -2; pointer-events: none;
+    background:
+      radial-gradient(80% 50% at 50% 0%, rgba(240,100,26,0.10), transparent 60%),
+      radial-gradient(90% 60% at 50% 110%, rgba(240,100,26,0.14), transparent 55%);
+  }
+  .bg-fx::after {
+    content: ""; position: absolute; inset: 0; opacity: 0.5;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+    animation: glow 5s infinite alternate ease-in-out;
+  }
+  @keyframes glow { from { opacity: 0.4; } to { opacity: 0.6; } }
+
+  .embers { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+  .ember {
+    position: absolute; bottom: -20px; border-radius: 50%;
+    background: var(--spark); box-shadow: 0 0 8px var(--flame), 0 0 16px var(--ember);
+    opacity: 0; animation: floatUp infinite ease-in;
+  }
+  .ember:nth-child(1){left:6%;width:4px;height:4px;animation-duration:8s;animation-delay:0s}
+  .ember:nth-child(2){left:18%;width:3px;height:3px;animation-duration:10s;animation-delay:3s}
+  .ember:nth-child(3){left:28%;width:5px;height:5px;animation-duration:7s;animation-delay:1s}
+  .ember:nth-child(4){left:40%;width:3px;height:3px;animation-duration:9s;animation-delay:4.5s}
+  .ember:nth-child(5){left:52%;width:4px;height:4px;animation-duration:11s;animation-delay:2s}
+  .ember:nth-child(6){left:63%;width:5px;height:5px;animation-duration:8s;animation-delay:5.5s}
+  .ember:nth-child(7){left:74%;width:3px;height:3px;animation-duration:10s;animation-delay:1.5s}
+  .ember:nth-child(8){left:85%;width:4px;height:4px;animation-duration:9s;animation-delay:3.5s}
+  .ember:nth-child(9){left:94%;width:3px;height:3px;animation-duration:7.5s;animation-delay:6s}
+  .ember:nth-child(10){left:46%;width:4px;height:4px;animation-duration:12s;animation-delay:7s}
+  @keyframes floatUp {
+    0%{transform:translateY(0) scale(1);opacity:0}
+    12%{opacity:0.85}
+    85%{opacity:0.15}
+    100%{transform:translateY(-90vh) translateX(28px) scale(0.4);opacity:0}
+  }
+
+  /* ---- Utilitários ---- */
+  .container { max-width: var(--maxw); margin: 0 auto; padding: 0 28px; }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--mono); font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--spark); background: rgba(251,176,36,0.08);
+    border: 1px solid rgba(251,176,36,0.22); border-radius: 100px; padding: 7px 14px;
+  }
+  .eyebrow .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--spark); box-shadow: 0 0 8px var(--spark); animation: pulse 1.6s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
+  .grad { background: var(--heat); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .reveal { opacity: 0; transform: translateY(18px); transition: opacity .7s ease, transform .7s ease; }
+  .reveal.visible { opacity: 1; transform: none; }
+
+  h1, h2, h3 { font-family: var(--display); font-weight: 700; line-height: 1.05; letter-spacing: -0.01em; }
+  .section-tag { font-family: var(--mono); font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ash-faint); }
+
+  /* ---- NAVBAR ---- */
+  .nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+    transition: background .3s ease, border-color .3s ease, backdrop-filter .3s ease;
+    border-bottom: 1px solid transparent;
+  }
+  .nav.scrolled {
+    background: rgba(13,10,8,0.78); backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--line);
+  }
+  .nav-inner { max-width: var(--maxw); margin: 0 auto; padding: 16px 28px; display: flex; align-items: center; gap: 28px; }
+  .brand { display: flex; align-items: center; gap: 11px; text-decoration: none; }
+  .brand .mark { width: 30px; height: 30px; }
+  .brand .name { font-family: var(--display); font-weight: 700; font-size: 22px; letter-spacing: -0.01em; text-transform: uppercase; color: var(--ash); }
+  .nav-links { display: flex; gap: 28px; margin-left: auto; }
+  .nav-links a { color: var(--ash-dim); text-decoration: none; font-size: 14px; font-weight: 500; transition: color .2s ease; }
+  .nav-links a:hover { color: var(--ash); }
+  .nav-cta { font-family: var(--display); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; font-size: 14px;
+    color: #1a0f05; background: var(--heat); border: none; border-radius: var(--r-sm); padding: 10px 18px; cursor: pointer;
+    transition: filter .2s ease, box-shadow .2s ease; box-shadow: 0 0 0 rgba(240,100,26,0); }
+  .nav-cta:hover { filter: brightness(1.08); box-shadow: 0 0 22px rgba(240,100,26,0.4); }
+
+  /* ---- HERO ---- */
+  .hero { padding: 150px 0 90px; }
+  .hero-grid { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 56px; align-items: center; }
+  .hero h1 { font-size: clamp(40px, 6vw, 68px); text-transform: uppercase; margin: 22px 0 20px; }
+  .hero .sub { font-size: 18px; color: var(--ash-dim); max-width: 520px; margin-bottom: 32px; }
+  .hero-ctas { display: flex; gap: 14px; flex-wrap: wrap; }
+  .btn-primary {
+    font-family: var(--display); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; font-size: 16px;
+    color: #1a0f05; background: var(--heat); border: none; border-radius: var(--r-sm); padding: 15px 26px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 10px;
+    animation: breathe 3s ease-in-out infinite alternate; transition: filter .15s ease;
+  }
+  .btn-primary:hover { filter: brightness(1.1); }
+  .btn-primary.strike { animation: breathe 3s ease-in-out infinite alternate, strike .5s ease-out; }
+  @keyframes breathe { from { box-shadow: 0 0 10px rgba(240,100,26,0.18); } to { box-shadow: 0 0 30px rgba(240,100,26,0.45); } }
+  @keyframes strike { 0% { box-shadow: 0 0 70px 10px rgba(251,176,36,0.85); filter: brightness(1.7); } 100% { box-shadow: 0 0 0 rgba(240,100,26,0); filter: brightness(1); } }
+  .btn-ghost {
+    font-family: var(--display); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; font-size: 16px;
+    color: var(--ash); background: transparent; border: 1px solid var(--line-strong); border-radius: var(--r-sm); padding: 15px 24px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 10px; transition: border-color .2s ease, background .2s ease;
+  }
+  .btn-ghost:hover { border-color: var(--flame); background: rgba(240,100,26,0.06); }
+  .hero-trust { display: flex; gap: 22px; margin-top: 30px; flex-wrap: wrap; }
+  .hero-trust span { font-family: var(--mono); font-size: 12px; color: var(--ash-faint); display: flex; align-items: center; gap: 7px; }
+  .hero-trust span::before { content: "▸"; color: var(--flame); }
+
+  /* ---- Demo de tablatura no hero ---- */
+  .demo {
+    background: linear-gradient(180deg, var(--iron-850), var(--iron-900));
+    border: 1px solid var(--line-strong); border-radius: var(--r); overflow: hidden;
+    box-shadow: 0 30px 80px -30px rgba(0,0,0,0.8), inset 0 0 60px rgba(240,100,26,0.04);
+  }
+  .demo-head { display: flex; align-items: center; gap: 10px; padding: 13px 16px; border-bottom: 1px solid var(--line); background: rgba(0,0,0,0.25); }
+  .demo-dots { display: flex; gap: 6px; }
+  .demo-dots i { width: 10px; height: 10px; border-radius: 50%; background: var(--iron-600); display: block; }
+  .demo-head .lbl { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--ash-faint); letter-spacing: 0.1em; text-transform: uppercase; }
+  .demo-badges { display: flex; gap: 7px; padding: 12px 16px 0; flex-wrap: wrap; }
+  .chip { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ash-dim);
+    background: var(--iron-800); border: 1px solid var(--line); border-radius: 100px; padding: 5px 11px; }
+  .chip.hot { color: var(--spark); border-color: rgba(251,176,36,0.35); }
+  .demo-tab { font-family: var(--mono); font-size: 13px; line-height: 1.75; white-space: pre; overflow-x: auto; padding: 14px 18px 20px; color: var(--ash); min-height: 176px; }
+  .demo-cursor { display: inline-block; width: 8px; height: 15px; background: var(--flame); vertical-align: middle; animation: blink 1s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* ---- Seções genéricas ---- */
+  section { position: relative; }
+  .sec-head { text-align: center; max-width: 640px; margin: 0 auto 52px; }
+  .sec-head h2 { font-size: clamp(30px, 4vw, 44px); text-transform: uppercase; margin: 14px 0 14px; }
+  .sec-head p { color: var(--ash-dim); font-size: 17px; }
+
+  /* ---- COMO FUNCIONA ---- */
+  .how { padding: 90px 0; }
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+  .step { background: var(--iron-900); border: 1px solid var(--line); border-radius: var(--r); padding: 30px 26px; position: relative; transition: transform .3s ease, border-color .3s ease; }
+  .step:hover { transform: translateY(-4px); border-color: var(--line-strong); }
+  .step .num { font-family: var(--display); font-weight: 700; font-size: 15px; color: var(--flame); letter-spacing: 0.1em; }
+  .step .ico { width: 40px; height: 40px; margin: 16px 0 14px; color: var(--flame); }
+  .step h3 { font-size: 21px; text-transform: uppercase; margin-bottom: 8px; }
+  .step p { color: var(--ash-dim); font-size: 15px; }
+
+  /* ---- FERRAMENTA ---- */
+  .tool { padding: 90px 0; }
+  .forge-grid { display: grid; grid-template-columns: 380px 1fr; gap: 26px; align-items: start; }
+  .panel { background: var(--iron-900); border: 1px solid var(--line); border-radius: var(--r); padding: 26px 24px; }
+  .panel-label { font-family: var(--mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ash-faint); margin-bottom: 22px; display: block; }
+  .field { margin-bottom: 24px; }
+  .field > label { display: block; font-family: var(--display); text-transform: uppercase; letter-spacing: 0.1em; font-size: 13px; font-weight: 600; margin-bottom: 11px; }
+
+  /* selects + inputs com glow no foco */
+  select {
+    width: 100%; background: var(--iron-800); color: var(--ash); border: 1px solid var(--line-strong);
+    border-radius: var(--r-sm); padding: 13px 14px; font-family: var(--mono); font-size: 14px; cursor: pointer; appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23f0641a' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 14px center;
+    transition: border-color .2s ease, box-shadow .2s ease;
+  }
+  select:hover { border-color: var(--ash-faint); }
+  select:focus-visible { outline: none; border-color: var(--flame); box-shadow: 0 0 0 3px rgba(240,100,26,0.15); }
+
+  /* afinação: pills de notas */
+  .tuning-notes { display: flex; gap: 6px; margin-top: 10px; }
+  .note-pill { font-family: var(--mono); font-size: 11px; color: var(--ash-dim); background: var(--iron-800); border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; min-width: 26px; text-align: center; }
+  .note-pill:first-child { color: var(--spark); border-color: rgba(251,176,36,0.3); }
+
+  /* slider BPM com preenchimento de calor */
+  .bpm-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+  .bpm-val { font-family: var(--display); font-size: 26px; font-weight: 700; color: var(--spark); }
+  .bpm-val small { font-size: 12px; color: var(--ash-faint); font-weight: 400; }
+  input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 5px; border-radius: 5px; cursor: pointer;
+    background: linear-gradient(to right, var(--flame) 0%, var(--flame) var(--fill,50%), var(--iron-700) var(--fill,50%)); }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--spark); border: 3px solid var(--iron-900); box-shadow: 0 0 12px var(--flame); }
+  input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: var(--spark); border: 3px solid var(--iron-900); box-shadow: 0 0 12px var(--flame); }
+
+  /* cards de subgênero */
+  .subgen-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+  .subgen {
+    text-align: left; background: var(--iron-800); border: 1px solid var(--line-strong); border-radius: var(--r-sm);
+    padding: 13px 13px; cursor: pointer; transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease, background .2s ease;
+    position: relative; overflow: hidden;
+  }
+  .subgen:hover { transform: translateY(-2px); border-color: var(--ash-faint); }
+  .subgen .sg-name { font-family: var(--display); text-transform: uppercase; font-weight: 600; font-size: 14px; letter-spacing: 0.04em; margin-bottom: 3px; }
+  .subgen .sg-desc { font-size: 11.5px; color: var(--ash-faint); line-height: 1.4; }
+  .subgen[aria-pressed=true] { border-color: var(--flame); background: rgba(240,100,26,0.08); box-shadow: 0 0 0 3px rgba(240,100,26,0.12), inset 0 0 30px rgba(240,100,26,0.06); }
+  .subgen[aria-pressed=true] .sg-name { color: var(--spark); }
+  .subgen.full { grid-column: 1 / -1; }
+
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; }
+  .toggle { position: relative; width: 48px; height: 26px; background: var(--iron-700); border: 1px solid var(--line-strong); border-radius: 26px; cursor: pointer; transition: background .2s, border-color .2s; flex: none; }
+  .toggle::after { content: ""; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: var(--ash-faint); transition: transform .2s, background .2s; }
+  .toggle[aria-checked=true] { background: rgba(240,100,26,0.25); border-color: var(--flame); }
+  .toggle[aria-checked=true]::after { transform: translateX(22px); background: var(--flame); }
+
+  .btn-forge { width: 100%; margin-top: 4px; font-family: var(--display); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; font-size: 17px;
+    color: #1a0f05; background: var(--heat); border: none; border-radius: var(--r-sm); padding: 16px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    animation: breathe 3s ease-in-out infinite alternate; transition: filter .15s ease; }
+  .btn-forge:hover { filter: brightness(1.1); }
+  .btn-forge.strike { animation: breathe 3s ease-in-out infinite alternate, strike .5s ease-out; }
+  .btn-forge:disabled { filter: grayscale(0.4) brightness(0.8); cursor: wait; animation: none; }
+
+  /* ---- ÁREA DE RESULTADO ---- */
+  .result { min-height: 480px; display: flex; flex-direction: column; }
+  .result-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding-bottom: 18px; margin-bottom: 18px; border-bottom: 1px solid var(--line); }
+  .result-head h3 { font-size: 19px; text-transform: uppercase; }
+  .result-meta { display: flex; gap: 7px; margin-left: auto; flex-wrap: wrap; }
+  .eq { display: none; gap: 3px; height: 20px; align-items: flex-end; margin-left: 8px; }
+  .eq.on { display: flex; }
+  .eq i { width: 4px; border-radius: 2px; background: var(--flame); animation: eq .5s infinite alternate; }
+  .eq i:nth-child(2){animation-delay:.15s} .eq i:nth-child(3){animation-delay:.35s} .eq i:nth-child(4){animation-delay:.2s} .eq i:nth-child(5){animation-delay:.45s}
+  @keyframes eq { from { height: 4px; } to { height: 20px; } }
+
+  .structure { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 16px; }
+  .seg { font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ash-dim);
+    background: var(--iron-800); border: 1px solid var(--line); border-left: 2px solid var(--flame); border-radius: 5px; padding: 6px 11px; }
+
+  .tab-wrap { flex: 1; background: var(--iron-950); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 16px 16px; box-shadow: inset 0 0 50px rgba(240,100,26,0.05); overflow-x: auto; }
+  .tab { font-family: var(--mono); font-size: 14px; line-height: 1.8; white-space: pre; color: var(--ash); tab-size: 2; }
+  .tab.stamp { animation: stamp .6s ease-out; }
+  @keyframes stamp { 0% { transform: scale(1.04); filter: brightness(1.8) blur(1px); color: var(--spark); } 100% { transform: scale(1); filter: none; } }
+
+  .toolbar { display: flex; gap: 9px; margin-top: 18px; flex-wrap: wrap; }
+  .tool-btn { font-family: var(--body); font-weight: 600; font-size: 13px; color: var(--ash-dim); background: var(--iron-800); border: 1px solid var(--line-strong); border-radius: var(--r-sm); padding: 10px 15px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: all .2s ease; }
+  .tool-btn:hover { color: var(--ash); border-color: var(--flame); background: rgba(240,100,26,0.07); }
+  .tool-btn svg { width: 15px; height: 15px; }
+  .tool-btn.primary { color: var(--spark); border-color: rgba(251,176,36,0.35); }
+
+  /* estados de loading / vazio */
+  .forging { display: none; flex-direction: column; align-items: center; justify-content: center; flex: 1; gap: 18px; text-align: center; }
+  .forging.on { display: flex; }
+  .anvil-load { width: 56px; height: 56px; color: var(--flame); animation: hammer 0.7s infinite; }
+  @keyframes hammer { 0%,100% { transform: translateY(0) rotate(0); } 40% { transform: translateY(-7px) rotate(-8deg); } 60% { transform: translateY(0) rotate(0); } }
+  .forging .msg { font-family: var(--display); text-transform: uppercase; letter-spacing: 0.12em; color: var(--ash); font-size: 16px; }
+  .forging .sub { font-size: 13px; color: var(--ash-faint); }
+
+  /* ---- RECURSOS ---- */
+  .features { padding: 90px 0; }
+  .feat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .feat { background: var(--iron-900); border: 1px solid var(--line); border-radius: var(--r); padding: 28px 24px; transition: transform .3s ease, border-color .3s ease, box-shadow .3s ease; }
+  .feat:hover { transform: translateY(-5px); border-color: rgba(240,100,26,0.4); box-shadow: 0 20px 50px -25px rgba(240,100,26,0.3); }
+  .feat .ico { width: 38px; height: 38px; color: var(--flame); margin-bottom: 16px; }
+  .feat h3 { font-size: 19px; text-transform: uppercase; margin-bottom: 8px; }
+  .feat p { color: var(--ash-dim); font-size: 14.5px; }
+
+  /* ---- CTA final + RODAPÉ ---- */
+  .cta-band { padding: 80px 0; }
+  .cta-box { background: linear-gradient(135deg, var(--iron-850), var(--iron-900)); border: 1px solid var(--line-strong); border-radius: 18px; padding: 56px 40px; text-align: center; position: relative; overflow: hidden; box-shadow: inset 0 0 80px rgba(240,100,26,0.06); }
+  .cta-box h2 { font-size: clamp(28px, 4vw, 42px); text-transform: uppercase; margin-bottom: 16px; }
+  .cta-box p { color: var(--ash-dim); margin-bottom: 28px; }
+
+  footer { border-top: 1px solid var(--line); padding: 54px 0 36px; }
+  .foot-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 32px; margin-bottom: 40px; }
+  .foot-brand .name { font-family: var(--display); font-weight: 700; font-size: 22px; text-transform: uppercase; display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .foot-brand p { color: var(--ash-faint); font-size: 14px; max-width: 280px; }
+  .foot-col h4 { font-family: var(--mono); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ash-faint); margin-bottom: 14px; }
+  .foot-col a { display: block; color: var(--ash-dim); text-decoration: none; font-size: 14px; margin-bottom: 9px; transition: color .2s ease; }
+  .foot-col a:hover { color: var(--flame); }
+  .foot-bottom { border-top: 1px solid var(--line); padding-top: 24px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; color: var(--ash-faint); font-size: 13px; font-family: var(--mono); }
+
+  /* toast */
+  .toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--iron-800); border: 1px solid var(--flame); color: var(--ash); padding: 12px 22px; border-radius: 100px; font-size: 14px; font-weight: 600; opacity: 0; pointer-events: none; transition: all .3s ease; z-index: 100; box-shadow: 0 0 30px rgba(240,100,26,0.3); }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ---- Responsivo ---- */
+  @media (max-width: 900px) {
+    .hero-grid, .forge-grid, .foot-grid { grid-template-columns: 1fr; }
+    .steps, .feat-grid { grid-template-columns: 1fr; }
+    .nav-links { display: none; }
+    .hero { padding: 120px 0 70px; }
+    .foot-grid { grid-template-columns: 1fr 1fr; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    .reveal { opacity: 1; transform: none; }
+    html { scroll-behavior: auto; }
+  }
+</style>
+</head>
+<body>
+  <div class="bg-fx" aria-hidden="true"></div>
+  <div class="embers" aria-hidden="true">
+    <span class="ember"></span><span class="ember"></span><span class="ember"></span><span class="ember"></span><span class="ember"></span>
+    <span class="ember"></span><span class="ember"></span><span class="ember"></span><span class="ember"></span><span class="ember"></span>
+  </div>
+
+  <!-- NAVBAR -->
+  <nav class="nav" id="nav">
+    <div class="nav-inner">
+      <a href="#" class="brand">
+        <svg class="mark" viewBox="0 0 32 32" fill="none"><path d="M4 22h24l-3 5H7l-3-5z" fill="url(#g)"/><path d="M9 22V12l7-4 7 4v10" stroke="url(#g)" stroke-width="2" fill="none"/><path d="M13 8l3-5 3 5" stroke="var(--spark)" stroke-width="2" fill="none" stroke-linecap="round"/><defs><linearGradient id="g" x1="4" y1="3" x2="28" y2="27"><stop stop-color="#c0341a"/><stop offset="1" stop-color="#fbb024"/></linearGradient></defs></svg>
+        <span class="name">RiffForge</span>
+      </a>
+      <div class="nav-links">
+        <a href="#como">Como funciona</a>
+        <a href="#forja">A forja</a>
+        <a href="#recursos">Recursos</a>
+      </div>
+      <button class="nav-cta" onclick="document.getElementById('forja').scrollIntoView()">Forjar grátis</button>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <header class="hero">
+    <div class="container hero-grid">
+      <div class="reveal">
+        <span class="eyebrow"><span class="dot"></span>Forja sonora movida por IA</span>
+        <h1>Forje riffs que <span class="grad">pesam como aço</span>.</h1>
+        <p class="sub">O RiffForge usa inteligência artificial treinada em metal para gerar riffs, tablaturas e estruturas completas em afinações graves — do Death ao Djent. Da ideia ao braço da guitarra em segundos.</p>
+        <div class="hero-ctas">
+          <button class="btn-primary" id="heroCta" onclick="document.getElementById('forja').scrollIntoView()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M14 3l-2 9h6l-8 9 2-9H6l8-9z" fill="#1a0f05"/></svg>
+            Forjar meu riff
+          </button>
+          <button class="btn-ghost" onclick="document.getElementById('como').scrollIntoView()">Ver a forja em ação</button>
+        </div>
+        <div class="hero-trust">
+          <span>Afinações graves nativas</span>
+          <span>Estruturas completas</span>
+          <span>Exportável</span>
+        </div>
+      </div>
+
+      <!-- Demo: tablatura sendo gerada ao vivo -->
+      <div class="demo reveal" aria-label="Demonstração de tablatura gerada">
+        <div class="demo-head">
+          <div class="demo-dots"><i></i><i></i><i></i></div>
+          <span class="lbl">forja • ao vivo</span>
+        </div>
+        <div class="demo-badges">
+          <span class="chip" id="demoTuning">Drop B</span>
+          <span class="chip" id="demoBpm">180 BPM</span>
+          <span class="chip hot" id="demoGen">Death Metal</span>
+        </div>
+        <pre class="demo-tab" id="demoTab"></pre>
+      </div>
+    </div>
+  </header>
+
+  <!-- COMO FUNCIONA -->
+  <section class="how" id="como">
+    <div class="container">
+      <div class="sec-head reveal">
+        <span class="section-tag">O processo</span>
+        <h2>Três marteladas até o riff</h2>
+        <p>Sem teoria, sem bloqueio criativo. Você define a matéria-prima, a IA forja, você leva pronto.</p>
+      </div>
+      <div class="steps">
+        <div class="step reveal">
+          <span class="num">01</span>
+          <svg class="ico" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <h3>Defina a matéria</h3>
+          <p>Escolha a afinação, o andamento em BPM e o subgênero. Ative blast beats se quiser peso total.</p>
+        </div>
+        <div class="step reveal">
+          <span class="num">02</span>
+          <svg class="ico" viewBox="0 0 24 24" fill="none"><path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+          <h3>A IA forja</h3>
+          <p>O motor gera um riff coerente com a tonalidade e uma estrutura de música completa — intro, peso e breakdown.</p>
+        </div>
+        <div class="step reveal">
+          <span class="num">03</span>
+          <svg class="ico" viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0l4-4m-4 4l-4-4M5 21h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <h3>Toque e exporte</h3>
+          <p>Ouça, copie a tablatura, gere variações infinitas ou exporte para levar direto pro ensaio.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FERRAMENTA -->
+  <section class="tool" id="forja">
+    <div class="container">
+      <div class="sec-head reveal">
+        <span class="section-tag">A bigorna</span>
+        <h2>Acenda a forja</h2>
+        <p>Ajuste os parâmetros e forje. O resultado aparece quente, à direita.</p>
+      </div>
+
+      <div class="forge-grid">
+        <!-- Controles -->
+        <div class="panel reveal">
+          <span class="panel-label">Parâmetros</span>
+
+          <div class="field">
+            <label for="afinacao">Afinação</label>
+            <select id="afinacao">
+              <option>Drop B</option><option>Drop A</option><option>Drop C</option><option>Standard E</option>
+            </select>
+            <div class="tuning-notes" id="tuningNotes"></div>
+          </div>
+
+          <div class="field">
+            <div class="bpm-head">
+              <label for="bpm" style="margin:0">Andamento</label>
+              <span class="bpm-val"><span id="bpmOut">180</span><small> BPM</small></span>
+            </div>
+            <input type="range" id="bpm" min="80" max="280" value="180" step="2">
+          </div>
+
+          <div class="field">
+            <label>Subgênero</label>
+            <div class="subgen-grid" id="subgenGrid"></div>
+          </div>
+
+          <div class="field toggle-row">
+            <label style="margin:0">Blast beats</label>
+            <div class="toggle" id="blast" role="switch" tabindex="0" aria-checked="false" aria-label="Blast beats"></div>
+          </div>
+
+          <button class="btn-forge" id="forjar">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M14 3l-2 9h6l-8 9 2-9H6l8-9z" fill="#1a0f05"/></svg>
+            Forjar riff
+          </button>
+        </div>
+
+        <!-- Resultado -->
+        <div class="panel result">
+          <div class="result-head">
+            <h3>Riff forjado</h3>
+            <div class="eq" id="eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+            <div class="result-meta" id="resultMeta"></div>
+          </div>
+
+          <div class="forging" id="forging">
+            <svg class="anvil-load" viewBox="0 0 24 24" fill="none"><path d="M3 11h14l-2 4H5l-2-4z" fill="currentColor"/><path d="M6 11V8h6l3-2 4 3-3 2" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linejoin="round"/></svg>
+            <div><div class="msg" id="forgingMsg">Forjando…</div><div class="sub">temperando o aço sonoro</div></div>
+          </div>
+
+          <div id="output">
+            <div class="structure" id="structure"></div>
+            <div class="tab-wrap"><pre class="tab" id="tab"></pre></div>
+            <div class="toolbar">
+              <button class="tool-btn primary" id="btnPlay"><svg viewBox="0 0 24 24" fill="none"><path d="M7 5l12 7-12 7V5z" fill="currentColor"/></svg> Reproduzir</button>
+              <button class="tool-btn" id="btnVary"><svg viewBox="0 0 24 24" fill="none"><path d="M4 4v6h6M20 20v-6h-6M20 9a8 8 0 00-14-3M4 15a8 8 0 0014 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Gerar variação</button>
+              <button class="tool-btn" id="btnCopy"><svg viewBox="0 0 24 24" fill="none"><rect x="9" y="9" width="11" height="11" rx="2" stroke="currentColor" stroke-width="2"/><path d="M5 15V5a2 2 0 012-2h10" stroke="currentColor" stroke-width="2"/></svg> Copiar</button>
+              <button class="tool-btn" id="btnExport"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0l4-4m-4 4l-4-4M5 21h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Exportar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RECURSOS -->
+  <section class="features" id="recursos">
+    <div class="container">
+      <div class="sec-head reveal">
+        <span class="section-tag">Arsenal</span>
+        <h2>Forjado para o peso</h2>
+        <p>Cada recurso pensado para quem vive de riff grave e estrutura pesada.</p>
+      </div>
+      <div class="feat-grid">
+        <div class="feat reveal"><svg class="ico" viewBox="0 0 24 24" fill="none"><path d="M12 2a7 7 0 00-7 7c0 3 2 4 2 7h10c0-3 2-4 2-7a7 7 0 00-7-7z" stroke="currentColor" stroke-width="2"/><path d="M9 22h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><h3>IA treinada em metal</h3><p>Modelo focado em vocabulário de metal — não um gerador genérico que cospe nota fora do tom.</p></div>
+        <div class="feat reveal"><svg class="ico" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><h3>Afinações graves nativas</h3><p>Drop B, Drop A, Drop C e mais. A IA respeita a afinação e o alcance real do braço.</p></div>
+        <div class="feat reveal"><svg class="ico" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" stroke-width="2"/><path d="M3 9h18M9 9v11" stroke="currentColor" stroke-width="2"/></svg><h3>Estruturas completas</h3><p>Não só um riff solto: intro, verso, refrão, breakdown e outro encadeados em uma música.</p></div>
+        <div class="feat reveal"><svg class="ico" viewBox="0 0 24 24" fill="none"><path d="M4 4v6h6M20 20v-6h-6M20 9a8 8 0 00-14-3M4 15a8 8 0 0014 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><h3>Variações infinitas</h3><p>Não gostou? Forje de novo. Cada martelada entrega uma versão nova dos mesmos parâmetros.</p></div>
+        <div class="feat reveal"><svg class="ico" viewBox="0 0 24 24" fill="none"><path d="M7 5l12 7-12 7V5z" fill="currentColor"/></svg><h3>Reprodução instantânea</h3><p>Ouça o riff direto no navegador antes de pegar a guitarra. Validação imediata.</p></div>
+        <div class="feat reveal"><svg class="ico" viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0l4-4m-4 4l-4-4M5 21h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><h3>Exportação livre</h3><p>Leve a tablatura como texto ou para seu editor favorito. O riff é seu, sem amarras.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA FINAL -->
+  <section class="cta-band">
+    <div class="container">
+      <div class="cta-box reveal">
+        <h2>A bigorna está <span class="grad">quente</span>.</h2>
+        <p>Pare de encarar o braço da guitarra esperando inspiração. Forje o próximo riff agora.</p>
+        <button class="btn-primary" onclick="document.getElementById('forja').scrollIntoView()">Forjar meu primeiro riff</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- RODAPÉ -->
+  <footer>
+    <div class="container">
+      <div class="foot-grid">
+        <div class="foot-brand">
+          <div class="name"><svg class="mark" width="26" height="26" viewBox="0 0 32 32" fill="none"><path d="M4 22h24l-3 5H7l-3-5z" fill="url(#g2)"/><path d="M9 22V12l7-4 7 4v10" stroke="url(#g2)" stroke-width="2" fill="none"/><defs><linearGradient id="g2" x1="4" y1="3" x2="28" y2="27"><stop stop-color="#c0341a"/><stop offset="1" stop-color="#fbb024"/></linearGradient></defs></svg>RiffForge</div>
+          <p>Forja sonora movida por IA. Cada riff, uma lâmina temperada para o peso.</p>
+        </div>
+        <div class="foot-col"><h4>Produto</h4><a href="#forja">A forja</a><a href="#recursos">Recursos</a><a href="#como">Como funciona</a></div>
+        <div class="foot-col"><h4>Recursos</h4><a href="#">Afinações</a><a href="#">Subgêneros</a><a href="#">Exportar</a></div>
+        <div class="foot-col"><h4>Sobre</h4><a href="#">Projeto</a><a href="#">Contato</a><a href="#">GitHub</a></div>
+      </div>
+      <div class="foot-bottom">
+        <span>© 2026 RiffForge · Forjado para quem leva o peso a sério.</span>
+        <span>HTML · CSS · JS</span>
+      </div>
+    </div>
+  </footer>
+
+  <div class="toast" id="toast"></div>
+  <audio id="som-forja" src="https://assets.mixkit.co/active_storage/sfx/2533/2533-preview.mp3" preload="auto"></audio>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const som = $('som-forja');
+
+  const TUNINGS = {
+    'Drop B':['B','F#','B','E','G#','C#'], 'Drop A':['A','E','A','D','F#','B'],
+    'Drop C':['C','G','C','F','A','D'], 'Standard E':['E','A','D','G','B','E'],
+  };
+  const SUBGEN = {
+    'Death Metal':   { desc: 'Tremolo implacável e blast beats. Peso bruto, sem trégua.', pat:[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1] },
+    'Groove Metal':  { desc: 'Síncope pesada e cadência que balança a cabeça.',          pat:[1,0,0,1,1,0,1,0,1,0,0,1,1,0,1,0] },
+    'Djent':         { desc: 'Poliritmia cirúrgica, palm mutes e cordas estendidas.',     pat:[1,0,0,1,0,0,1,0,1,0,0,1,0,1,0,0] },
+    'Metalcore':     { desc: 'Breakdowns demolidores com melodia por cima.',              pat:[1,1,0,0,1,1,0,0,1,0,1,0,1,1,0,0] },
+    'Black Metal':   { desc: 'Tremolo gélido e atmosfera. Frio como a forja apagada.',    pat:[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1] },
+  };
+  const ESTRUTURAS = {
+    'Death Metal':  ['Intro','Riff A','Blast','Riff B','Breakdown','Outro'],
+    'Groove Metal': ['Intro','Groove','Refrão','Ponte','Groove','Outro'],
+    'Djent':        ['Intro','Verso','Poliritmia','Refrão','Breakdown','Outro'],
+    'Metalcore':    ['Intro','Verso','Refrão','Verso','Breakdown','Final'],
+    'Black Metal':  ['Intro','Tremolo A','Atmosfera','Tremolo B','Clímax','Outro'],
+  };
+  const FRETS = ['3','5','7','8','10'];
+
+  // ===== Gerador (mock — será trocado por fetch ao back-end Java) =====
+  function gerar({ afinacao, subgenero, blastBeats }) {
+    const cordas = TUNINGS[afinacao] || TUNINGS['Drop B'];
+    const SLOTS = 16, MED = 2, total = SLOTS * MED;
+    let pat = (SUBGEN[subgenero] || SUBGEN['Death Metal']).pat;
+    if (blastBeats) pat = pat.map(() => 1);
+    const grade = cordas.map(() => Array(total).fill('-'));
+    for (let s = 0; s < total; s++) {
+      const m = s % SLOTS;
+      if (pat[m]) grade[0][s] = '0';
+      if (m === 0 || m === 8) {
+        const corda = 1 + Math.floor(Math.random() * 2);
+        grade[corda][s] = FRETS[Math.floor(Math.random() * FRETS.length)];
+      }
+      if (Math.random() < 0.08) grade[1][s] = FRETS[Math.floor(Math.random() * FRETS.length)];
+    }
+    const linhas = [];
+    for (let c = cordas.length - 1; c >= 0; c--) {
+      const rot = (cordas[c] + ' ').slice(0, 2), partes = [];
+      for (let m = 0; m < MED; m++) partes.push(grade[c].slice(m * SLOTS, (m + 1) * SLOTS).join(''));
+      linhas.push(rot + '|' + partes.join('|') + '|');
+    }
+    return linhas.join('\n');
+  }
+
+  // ===== Estado da ferramenta =====
+  let estado = { afinacao: 'Drop B', bpm: 180, subgenero: 'Death Metal', blastBeats: false };
+
+  // afinação -> pills de notas
+  function pintarNotas() {
+    $('tuningNotes').innerHTML = TUNINGS[estado.afinacao].map(n => `<span class="note-pill">${n}</span>`).join('');
+  }
+  $('afinacao').addEventListener('change', e => { estado.afinacao = e.target.value; pintarNotas(); });
+
+  // BPM
+  const bpm = $('bpm');
+  function pintarBpm() {
+    estado.bpm = Number(bpm.value); $('bpmOut').textContent = bpm.value;
+    const pct = ((bpm.value - bpm.min) / (bpm.max - bpm.min)) * 100;
+    bpm.style.setProperty('--fill', pct + '%');
+  }
+  bpm.addEventListener('input', pintarBpm);
+
+  // cards de subgênero
+  $('subgenGrid').innerHTML = Object.keys(SUBGEN).map((k, i) =>
+    `<button class="subgen${i === 4 ? ' full' : ''}" data-sg="${k}" aria-pressed="${i === 0}">
+       <div class="sg-name">${k.replace(' Metal','')}</div><div class="sg-desc">${SUBGEN[k].desc}</div>
+     </button>`).join('');
+  $('subgenGrid').addEventListener('click', e => {
+    const card = e.target.closest('.subgen'); if (!card) return;
+    document.querySelectorAll('.subgen').forEach(c => c.setAttribute('aria-pressed', 'false'));
+    card.setAttribute('aria-pressed', 'true'); estado.subgenero = card.dataset.sg;
+  });
+
+  // blast toggle
+  const blast = $('blast');
+  function toggleBlast() { const v = blast.getAttribute('aria-checked') !== 'true'; blast.setAttribute('aria-checked', String(v)); estado.blastBeats = v; }
+  blast.addEventListener('click', toggleBlast);
+  blast.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggleBlast(); } });
+
+  // ===== Forjar =====
+  const MSGS = ['Forjando…', 'Martelando o aço…', 'Temperando a lâmina…'];
+  function renderResultado() {
+    $('structure').innerHTML = (ESTRUTURAS[estado.subgenero] || []).map(s => `<span class="seg">${s}</span>`).join('');
+    $('resultMeta').innerHTML = [
+      `<span class="chip">${estado.afinacao}</span>`,
+      `<span class="chip">${estado.bpm} BPM</span>`,
+      `<span class="chip hot">${estado.subgenero}</span>`,
+      estado.blastBeats ? `<span class="chip hot">Blast</span>` : '',
+    ].join('');
+    const tab = $('tab'); tab.textContent = gerar(estado);
+    tab.classList.remove('stamp'); void tab.offsetWidth; tab.classList.add('stamp');
+  }
+  function forjar(comSomEAnim = true) {
+    if (comSomEAnim && som) { som.currentTime = 0; som.play().catch(() => {}); }
+    const btn = $('forjar');
+    if (comSomEAnim) { btn.classList.remove('strike'); void btn.offsetWidth; btn.classList.add('strike'); }
+    if (!comSomEAnim) { renderResultado(); return; }
+    // estado de carregamento (simula a latência futura da IA)
+    btn.disabled = true; $('output').style.display = 'none'; $('forging').classList.add('on');
+    $('forgingMsg').textContent = MSGS[Math.floor(Math.random() * MSGS.length)];
+    setTimeout(() => {
+      $('forging').classList.remove('on'); $('output').style.display = 'block'; btn.disabled = false;
+      renderResultado();
+    }, 750);
+  }
+  $('forjar').addEventListener('click', () => forjar(true));
+  $('btnVary').addEventListener('click', () => forjar(true));
+
+  // toolbar
+  function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 1800); }
+  $('btnCopy').addEventListener('click', () => { navigator.clipboard.writeText($('tab').textContent).then(() => toast('Tablatura copiada 🔥')).catch(() => toast('Não foi possível copiar')); });
+  $('btnExport').addEventListener('click', () => {
+    const blob = new Blob([`RiffForge — ${estado.afinacao} · ${estado.bpm} BPM · ${estado.subgenero}\n\n` + $('tab').textContent], { type: 'text/plain' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'riff-forjado.txt'; a.click(); toast('Riff exportado');
+  });
+  let tocando = false;
+  $('btnPlay').addEventListener('click', () => {
+    tocando = !tocando; $('eq').classList.toggle('on', tocando);
+    $('btnPlay').innerHTML = tocando
+      ? '<svg viewBox="0 0 24 24" fill="none"><rect x="6" y="5" width="4" height="14" fill="currentColor"/><rect x="14" y="5" width="4" height="14" fill="currentColor"/></svg> Pausar'
+      : '<svg viewBox="0 0 24 24" fill="none"><path d="M7 5l12 7-12 7V5z" fill="currentColor"/></svg> Reproduzir';
+    if (tocando) setTimeout(() => { tocando = false; $('eq').classList.remove('on'); $('btnPlay').innerHTML = '<svg viewBox="0 0 24 24" fill="none"><path d="M7 5l12 7-12 7V5z" fill="currentColor"/></svg> Reproduzir'; }, 3000);
+  });
+
+  // ===== Demo do hero (tablatura "se gerando") =====
+  const DEMOS = [
+    { t: 'Drop B', b: 180, g: 'Death Metal' },
+    { t: 'Drop C', b: 140, g: 'Groove Metal' },
+    { t: 'Drop A', b: 200, g: 'Djent' },
+  ];
+  let di = 0;
+  function rodarDemo() {
+    const d = DEMOS[di]; di = (di + 1) % DEMOS.length;
+    $('demoTuning').textContent = d.t; $('demoBpm').textContent = d.b + ' BPM'; $('demoGen').textContent = d.g;
+    const tab = gerar({ afinacao: d.t, subgenero: d.g, blastBeats: d.g === 'Death Metal' });
+    const linhas = tab.split('\n'); const el = $('demoTab');
+    el.textContent = ''; let i = 0;
+    const reduz = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduz) { el.textContent = tab; setTimeout(rodarDemo, 4000); return; }
+    (function escreve() {
+      if (i < linhas.length) { el.textContent += (i ? '\n' : '') + linhas[i]; i++; setTimeout(escreve, 130); }
+      else { el.innerHTML = tab + '<span class="demo-cursor"></span>'; setTimeout(rodarDemo, 2600); }
+    })();
+  }
+
+  // ===== Navbar scroll + reveals =====
+  addEventListener('scroll', () => { $('nav').classList.toggle('scrolled', scrollY > 20); });
+  const io = new IntersectionObserver((es) => es.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); }), { threshold: 0.12 });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+  // ===== Init =====
+  pintarNotas(); pintarBpm(); rodarDemo();
+  forjar(false); // resultado já vem preenchido (nunca começa vazio)
+</script>
+</body>
+</html>
