@@ -3,425 +3,360 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="RiffForge — máquina de riffs e tablaturas de metal. Afinação, andamento, subgênero: tab grave pronta, do Death ao Djent.">
-<title>RiffForge — Zine / Máquina de riffs</title>
+<meta name="description" content="RiffForge — gerador de tablaturas de metal. Afinação, andamento e subgênero entram; tablatura sai pronta, do Death ao Djent.">
+<title>RiffForge — Gerador de tablaturas</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@500;600;700&family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --paper:   #e8e3d4;
-    --paper-2: #f4f0e6;
-    --paper-3: #fbf9f2;
-    --ink:     #14110c;
-    --ink-2:   #2c271e;
-    --ink-soft:#544d40;
-    --hair:    rgba(20,17,12,0.20);
-    --hair-2:  rgba(20,17,12,0.40);
-    --red:     #cf2417;
-    --red-deep:#9c1a10;
+    --bg:     #0a0a0b;
+    --bg-2:   #101012;
+    --bg-3:   #161619;
+    --line:   rgba(255,255,255,0.08);
+    --line-2: rgba(255,255,255,0.16);
+    --fg:     #ededeb;
+    --fg-2:   #b6b6b3;
+    --fg-dim: #888886;
+    --fg-faint:#5c5c5e;
 
-    --maxw: 1140px;
-    --display: "Anton", Impact, sans-serif;
-    --cond: "Oswald", system-ui, sans-serif;
-    --body: "Archivo", system-ui, sans-serif;
+    --display: "Space Grotesk", system-ui, sans-serif;
+    --body: "Inter", system-ui, sans-serif;
     --mono: "JetBrains Mono", ui-monospace, monospace;
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
+    --maxw: 1180px;
+    --r: 7px;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html { scroll-behavior: smooth; }
 
   body {
-    background: var(--paper);
-    color: var(--ink);
+    background: var(--bg);
+    color: var(--fg);
     font-family: var(--body);
-    line-height: 1.55;
+    font-weight: 400;
+    line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     overflow-x: hidden;
   }
-
-  /* grão de fotocópia por cima de tudo */
+  body::before {
+    content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background: radial-gradient(120% 80% at 50% -10%, rgba(255,255,255,0.05), transparent 60%);
+  }
+  /* grão sutil */
   body::after {
-    content: ""; position: fixed; inset: 0; z-index: 200; pointer-events: none;
-    opacity: 0.55; mix-blend-mode: multiply;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 220 220' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+    content: ""; position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: 0.025; mix-blend-mode: screen;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
 
-  ::selection { background: var(--red); color: var(--paper-3); }
+  ::selection { background: var(--fg); color: var(--bg); }
+  a { color: inherit; text-decoration: none; }
 
-  h1, h2, h3 { font-family: var(--display); font-weight: 400; line-height: 0.9; letter-spacing: 0.01em; text-transform: uppercase; }
-  .red { color: var(--red); }
-  .reveal { opacity: 0; transform: translateY(14px); transition: opacity .5s ease, transform .5s ease; }
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 32px; position: relative; z-index: 2; }
+
+  h1, h2, h3 { font-family: var(--display); font-weight: 400; letter-spacing: -0.02em; line-height: 1.0; }
+
+  .kicker { font-family: var(--mono); font-size: 11px; font-weight: 400; letter-spacing: 0.28em; text-transform: uppercase; color: var(--fg-dim); }
+  .mono-label { font-family: var(--mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--fg-faint); }
+
+  /* ---------- cursor custom ---------- */
+  .cursor, .cursor-ring { position: fixed; top: 0; left: 0; pointer-events: none; z-index: 9999; border-radius: 50%; mix-blend-mode: difference; will-change: transform; }
+  .cursor { width: 6px; height: 6px; background: #fff; }
+  .cursor-ring { width: 34px; height: 34px; border: 1px solid rgba(255,255,255,0.5); transition: width .25s var(--ease), height .25s var(--ease), opacity .25s; }
+  .cursor-ring.grow { width: 56px; height: 56px; border-color: rgba(255,255,255,0.9); }
+  .has-cursor, .has-cursor a, .has-cursor button, .has-cursor select, .has-cursor input, .has-cursor label, .has-cursor [role=switch] { cursor: none; }
+
+  /* ---------- reveals / kinetic ---------- */
+  .reveal { opacity: 0; transform: translateY(30px); transition: opacity 1s var(--ease), transform 1s var(--ease); }
   .reveal.visible { opacity: 1; transform: none; }
-  @media (prefers-reduced-motion: reduce) { .reveal { opacity: 1; transform: none; } html { scroll-behavior: auto; } * { animation: none !important; } }
-
-  /* ===================================================================
-     MASTHEAD DE JORNAL — bloco gigante, ponta a ponta
-  =================================================================== */
-  .masthead { background: var(--paper); border-bottom: 3px solid var(--ink); }
-  .mh-dateline {
-    display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
-    padding: 7px 18px; font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-soft);
-    border-bottom: 1px solid var(--ink);
+  .w { display: inline-block; overflow: hidden; vertical-align: top; }
+  .w-i { display: inline-block; transform: translateY(110%); transition: transform 0.9s var(--ease); }
+  [data-split].in .w-i { transform: none; }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal { opacity: 1; transform: none; }
+    .w-i { transform: none; }
+    html { scroll-behavior: auto; }
+    * { animation: none !important; }
   }
-  .mh-dateline .mid { color: var(--red); letter-spacing: 0.3em; }
-  .mh-title {
-    font-family: var(--display); text-align: center; line-height: 0.78; letter-spacing: -0.02em;
-    font-size: clamp(58px, 15vw, 210px); padding: 18px 12px 10px;
-    border-top: 3px solid var(--ink); border-bottom: 3px solid var(--ink); margin-top: -1px;
-    white-space: nowrap; overflow: hidden;
-  }
-  .mh-title i { font-style: normal; color: var(--red); }
-  .mh-nav { display: flex; flex-wrap: wrap; }
-  .mh-nav a, .mh-nav button {
-    flex: 1 1 0; min-width: 130px; text-align: center; cursor: pointer;
-    font-family: var(--cond); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; font-size: 15px;
-    color: var(--ink); background: var(--paper); border: 0; border-left: 3px solid var(--ink); padding: 12px 10px;
-    text-decoration: none; transition: background .12s ease, color .12s ease;
-  }
-  .mh-nav > :first-child { border-left: 0; }
-  .mh-nav a:hover { background: var(--ink); color: var(--paper-3); }
-  .mh-nav .tag { flex: 0 0 auto; min-width: 0; font-family: var(--mono); font-weight: 700; font-size: 11px; letter-spacing: 0.12em; color: var(--ink-soft); cursor: default; }
-  .mh-nav .forjar { flex: 0 0 auto; min-width: 0; background: var(--red); color: var(--paper-3); border-left-color: var(--ink); }
-  .mh-nav .forjar:hover { background: var(--ink); }
 
-  /* ===================================================================
-     PÁGINA — caixa de jornal com bordas duras (blueprint)
-  =================================================================== */
-  .page { max-width: 1240px; margin: 0 auto; background: var(--paper); border-left: 3px solid var(--ink); border-right: 3px solid var(--ink); }
-  .panel { position: relative; padding: 44px 36px; border-bottom: 3px solid var(--ink); }
-  .fig { position: absolute; top: 10px; right: 12px; font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-soft); transform: rotate(2deg); }
+  /* ---------- NAV ---------- */
+  .nav { position: fixed; top: 0; left: 0; right: 0; z-index: 50; transition: background .4s var(--ease), border-color .4s var(--ease), backdrop-filter .4s; border-bottom: 1px solid transparent; }
+  .nav.scrolled { background: rgba(10,10,11,0.72); backdrop-filter: blur(16px); border-bottom: 1px solid var(--line); }
+  .nav-in { max-width: var(--maxw); margin: 0 auto; padding: 20px 32px; display: flex; align-items: center; gap: 30px; }
+  .brand { font-family: var(--display); font-weight: 500; font-size: 19px; letter-spacing: -0.02em; }
+  .brand .dot { color: var(--fg-faint); }
+  .nav-links { display: flex; gap: 30px; margin-left: auto; }
+  .nav-links a { font-family: var(--mono); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--fg-dim); transition: color .25s; position: relative; }
+  .nav-links a::after { content: ""; position: absolute; left: 0; bottom: -5px; width: 0; height: 1px; background: var(--fg); transition: width .3s var(--ease); }
+  .nav-links a:hover { color: var(--fg); }
+  .nav-links a:hover::after { width: 100%; }
 
-  .sec-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; margin-bottom: 26px; border-bottom: 3px solid var(--ink); padding-bottom: 12px; }
-  .sec-top h2 { font-size: clamp(34px, 6vw, 64px); }
-  .sec-top h2 .red { color: var(--red); }
-  .sec-top .no { font-family: var(--mono); font-size: 12px; letter-spacing: 0.16em; color: var(--ink-soft); text-transform: uppercase; white-space: nowrap; transform: rotate(-2deg); }
+  /* ---------- HERO ---------- */
+  .hero { min-height: 100svh; display: flex; flex-direction: column; justify-content: center; padding: 140px 0 80px; }
+  .hero .kicker { margin-bottom: 28px; display: block; }
+  .hero h1 { font-size: clamp(46px, 8.5vw, 116px); font-weight: 300; letter-spacing: -0.035em; max-width: 14ch; }
+  .hero h1 em { font-style: normal; color: var(--fg-faint); }
+  .hero .sub { margin-top: 34px; font-size: clamp(16px, 1.5vw, 19px); font-weight: 300; color: var(--fg-2); max-width: 46ch; }
+  .hero-actions { margin-top: 46px; display: flex; align-items: center; gap: 28px; flex-wrap: wrap; }
+  .link-arrow { font-family: var(--mono); font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--fg); display: inline-flex; align-items: center; gap: 10px; cursor: pointer; background: none; border: none; }
+  .link-arrow .ar { display: inline-block; transition: transform .3s var(--ease); }
+  .link-arrow:hover .ar { transform: translateX(6px); }
+  .link-muted { font-family: var(--mono); font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--fg-dim); cursor: pointer; background: none; border: none; transition: color .25s; }
+  .link-muted:hover { color: var(--fg); }
+  .hero-foot { margin-top: 70px; display: flex; justify-content: space-between; align-items: flex-end; border-top: 1px solid var(--line); padding-top: 18px; gap: 20px; flex-wrap: wrap; }
+  .hero-foot .idx { font-family: var(--mono); font-size: 12px; color: var(--fg-faint); letter-spacing: 0.1em; }
+  .scrollcue { font-family: var(--mono); font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--fg-faint); display: flex; align-items: center; gap: 10px; }
+  .scrollcue .ln { width: 40px; height: 1px; background: var(--line-2); position: relative; overflow: hidden; }
+  .scrollcue .ln::after { content: ""; position: absolute; inset: 0; width: 40%; background: var(--fg); animation: slide 2.4s var(--ease) infinite; }
+  @keyframes slide { 0% { transform: translateX(-100%);} 60%,100% { transform: translateX(260%);} }
 
-  /* ===================================================================
-     HERO — pôster de show (colagem)
-  =================================================================== */
-  .hero { position: relative; overflow: hidden; text-align: center; padding: 64px 26px 78px; border-bottom: 3px solid var(--ink); min-height: 540px; }
-  .hero::before {
-    content: "FORJA · FORJA · FORJA"; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-    font-family: var(--display); font-size: 22vw; color: rgba(20,17,12,0.04); white-space: nowrap; pointer-events: none; letter-spacing: 0.05em;
-  }
-  .hero-inner { position: relative; z-index: 2; max-width: 880px; margin: 0 auto; }
-  .hero .tagline { font-family: var(--mono); font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 14px; }
-  .hero h1 { font-size: clamp(50px, 11vw, 138px); }
-  .hero h1 .l { display: block; }
-  .hero h1 .l2 { margin-left: 0.04em; }
-  .hero .lede { font-size: 18px; max-width: 540px; margin: 22px auto 26px; color: var(--ink-2); }
-  .hero .lede b { background: var(--red); color: var(--paper-3); padding: 0 4px; font-weight: 700; }
-  .hero-ctas { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
-  .hero-trust { display: flex; gap: 16px; margin-top: 24px; flex-wrap: wrap; justify-content: center; font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-soft); }
-  .hero-trust span::before { content: "✦ "; color: var(--red); }
-
-  /* botões duros */
-  .btn-blk, .btn-out {
-    font-family: var(--display); text-transform: uppercase; letter-spacing: 0.03em; font-size: 18px;
-    border: 3px solid var(--ink); padding: 13px 24px 10px; cursor: pointer;
-    display: inline-flex; align-items: center; gap: 9px; transition: transform .1s ease, background .15s ease, color .15s ease;
-  }
-  .btn-blk { color: var(--paper-3); background: var(--ink); }
-  .btn-blk:hover { background: var(--red); border-color: var(--ink); transform: translate(-2px,-2px); }
-  .btn-out { color: var(--ink); background: transparent; }
-  .btn-out:hover { background: var(--ink); color: var(--paper-3); }
-
-  /* printout colado torto (position absolute sobre o pôster) */
-  .printout {
-    position: absolute; top: 26px; right: -10px; z-index: 4; width: min(380px, 42vw);
-    background: var(--paper-3); border: 3px solid var(--ink); box-shadow: 10px 10px 0 var(--ink);
-    transform: rotate(6deg);
-  }
-  .printout .tape { position: absolute; width: 92px; height: 26px; background: rgba(207,36,23,0.2); border: 1px dashed rgba(156,26,16,0.55); top: -13px; }
-  .printout .tape.l { left: 14px; transform: rotate(-7deg); }
-  .printout .tape.r { right: 14px; transform: rotate(6deg); }
-  .printout-head { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; padding: 11px 13px; border-bottom: 2px solid var(--ink); font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-2); }
-  .printout-head .stamp { background: var(--ink); color: var(--paper-3); padding: 2px 7px; }
-  .printout-head .sep { color: var(--hair-2); }
-  .demo-tab { font-family: var(--mono); font-size: 12.5px; line-height: 1.7; white-space: pre; overflow-x: auto; padding: 13px; min-height: 160px; color: var(--ink); }
-  .demo-cursor { display: inline-block; width: 8px; height: 14px; background: var(--red); vertical-align: middle; animation: blink 1s steps(2) infinite; }
-  @keyframes blink { 50% { opacity: 0; } }
-
-  /* faixa marquee */
-  .strip { background: var(--ink); color: var(--paper-2); overflow: hidden; border-bottom: 3px solid var(--ink); }
-  .strip-track { display: flex; gap: 36px; padding: 11px 0; white-space: nowrap; font-family: var(--display); font-size: 24px; text-transform: uppercase; letter-spacing: 0.04em; animation: marq 26s linear infinite; }
-  .strip-track span { display: inline-flex; align-items: center; gap: 36px; }
-  .strip-track i { color: var(--red); font-style: normal; }
+  /* ---------- marquee discreto ---------- */
+  .ticker { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); overflow: hidden; padding: 16px 0; }
+  .ticker-track { display: flex; gap: 48px; white-space: nowrap; animation: marq 40s linear infinite; }
+  .ticker-track span { font-family: var(--mono); font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--fg-faint); display: inline-flex; gap: 48px; }
+  .ticker-track b { color: var(--fg-dim); font-weight: 400; }
   @keyframes marq { to { transform: translateX(-50%); } }
 
-  /* ===================================================================
-     PROCESSO — colunas confinadas em caixas
-  =================================================================== */
-  .process-list { display: grid; grid-template-columns: repeat(3, 1fr); border: 3px solid var(--ink); }
-  .pstep { padding: 24px 22px; border-left: 3px solid var(--ink); }
-  .pstep:first-child { border-left: 0; }
-  .pstep .pn { font-family: var(--display); font-size: 72px; line-height: 0.78; color: var(--red); display: block; margin-bottom: 10px; }
-  .pstep h3 { font-family: var(--cond); font-weight: 700; font-size: 22px; text-transform: uppercase; margin-bottom: 6px; }
-  .pstep p { color: var(--ink-2); font-size: 14.5px; }
+  /* ---------- seções ---------- */
+  section { position: relative; }
+  .band { padding: 130px 0; }
+  .sec-head { display: grid; grid-template-columns: 1fr; gap: 18px; margin-bottom: 70px; max-width: 760px; }
+  .sec-head h2 { font-size: clamp(30px, 4.4vw, 56px); font-weight: 300; letter-spacing: -0.03em; }
+  .sec-head p { color: var(--fg-2); font-weight: 300; font-size: 17px; }
 
-  /* ===================================================================
-     A FORJA — colagem assimétrica (cupom invade o resultado)
-  =================================================================== */
-  .forge-collage { display: grid; grid-template-columns: 360px minmax(0, 1fr); align-items: start; }
+  /* PROCESSO */
+  .steps { border-top: 1px solid var(--line); }
+  .step { display: grid; grid-template-columns: 120px 1fr; gap: 40px; align-items: baseline; padding: 40px 0; border-bottom: 1px solid var(--line); transition: padding-left .4s var(--ease); }
+  .step:hover { padding-left: 14px; }
+  .step .n { font-family: var(--mono); font-size: 13px; color: var(--fg-faint); letter-spacing: 0.1em; }
+  .step h3 { font-size: clamp(22px, 3vw, 34px); font-weight: 300; letter-spacing: -0.02em; margin-bottom: 12px; }
+  .step p { color: var(--fg-2); font-weight: 300; max-width: 52ch; }
 
-  .coupon {
-    position: relative; z-index: 10; margin-top: 62px; margin-right: -46px;
-    background: var(--paper-3); border: 3px solid var(--ink); box-shadow: 9px 9px 0 var(--ink);
-    padding: 24px 20px; transform: rotate(-1.6deg);
-  }
-  .coupon::before { content: "✂ — — — — — — — — — — —"; position: absolute; top: -11px; left: 14px; font-family: var(--mono); font-size: 11px; color: var(--ink-soft); background: var(--paper-3); padding: 0 6px; }
-  .coupon-h { font-family: var(--display); font-size: 23px; text-transform: uppercase; margin-bottom: 4px; }
-  .coupon-sub { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 20px; }
-  .field { margin-bottom: 20px; }
-  .field > label { display: block; font-family: var(--cond); text-transform: uppercase; letter-spacing: 0.08em; font-size: 13px; font-weight: 700; margin-bottom: 9px; }
+  /* ---------- FERRAMENTA ---------- */
+  .tool-grid { display: grid; grid-template-columns: 0.85fr 1.15fr; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+  .panel { background: var(--bg); padding: 34px 32px; }
+  .panel-label { display: block; margin-bottom: 28px; }
+  .field { margin-bottom: 28px; }
+  .field > label { display: block; font-family: var(--mono); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--fg-dim); margin-bottom: 14px; }
 
   select {
-    width: 100%; background: var(--paper); color: var(--ink); border: 2px solid var(--ink);
-    border-radius: 0; padding: 11px 12px; font-family: var(--mono); font-size: 14px; cursor: pointer; appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23cf2417' stroke-width='2' fill='none'/%3E%3C/svg%3E");
-    background-repeat: no-repeat; background-position: right 12px center;
+    width: 100%; background: var(--bg-2); color: var(--fg); border: 1px solid var(--line-2); border-radius: var(--r);
+    padding: 14px 16px; font-family: var(--body); font-size: 15px; cursor: pointer; appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888886' stroke-width='1.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 16px center; transition: border-color .25s;
   }
-  select:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+  select:hover { border-color: var(--fg-faint); }
+  select:focus-visible { outline: none; border-color: var(--fg); }
 
-  .tuning-notes { display: flex; gap: 5px; margin-top: 9px; flex-wrap: wrap; }
-  .note-pill { font-family: var(--mono); font-size: 11px; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); padding: 3px 7px; min-width: 25px; text-align: center; }
-  .note-pill:first-child { background: var(--red); color: var(--paper-3); border-color: var(--red); }
+  .tuning-notes { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
+  .note-pill { font-family: var(--mono); font-size: 11px; color: var(--fg-dim); background: var(--bg-2); border: 1px solid var(--line); border-radius: 5px; padding: 4px 8px; min-width: 26px; text-align: center; }
+  .note-pill:first-child { color: var(--fg); border-color: var(--line-2); }
 
-  .bpm-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
-  .bpm-val { font-family: var(--display); font-size: 28px; }
-  .bpm-val small { font-family: var(--mono); font-size: 11px; color: var(--ink-soft); }
-
-  /* slider com trilha preenchida à esquerda do thumb (gradiente via --fill) */
+  .bpm-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; }
+  .bpm-val { font-family: var(--display); font-size: 30px; font-weight: 300; letter-spacing: -0.02em; }
+  .bpm-val small { font-family: var(--mono); font-size: 11px; color: var(--fg-faint); letter-spacing: 0.1em; }
   input[type=range] {
-    -webkit-appearance: none; appearance: none; width: 100%; height: 12px; cursor: pointer;
-    border: 2px solid var(--ink);
-    background: linear-gradient(to right, var(--red) 0, var(--red) var(--fill, 50%), var(--paper) var(--fill, 50%), var(--paper) 100%);
+    -webkit-appearance: none; appearance: none; width: 100%; height: 1px; cursor: pointer;
+    background: linear-gradient(to right, var(--fg) 0, var(--fg) var(--fill,50%), var(--line-2) var(--fill,50%), var(--line-2) 100%);
   }
-  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 22px; background: var(--ink); border: 2px solid var(--ink); box-shadow: -2px 0 0 var(--paper-3), 2px 0 0 var(--paper-3); }
-  input[type=range]::-moz-range-thumb { width: 14px; height: 22px; border-radius: 0; background: var(--ink); border: 2px solid var(--ink); }
-  input[type=range]:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 13px; height: 13px; border-radius: 50%; background: var(--fg); border: none; box-shadow: 0 0 0 4px var(--bg); }
+  input[type=range]::-moz-range-thumb { width: 13px; height: 13px; border-radius: 50%; background: var(--fg); border: none; box-shadow: 0 0 0 4px var(--bg); }
+  input[type=range]:focus-visible { outline: none; }
 
-  .subgen-grid { display: flex; flex-direction: column; gap: 0; border: 2px solid var(--ink); }
+  .subgen-grid { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
   .subgen {
-    text-align: left; background: var(--paper-3); border: 0; border-bottom: 1px solid var(--hair-2);
-    padding: 11px 12px; cursor: pointer; display: grid; grid-template-columns: 18px 1fr; gap: 11px; align-items: start;
+    text-align: left; background: var(--bg); border: 0; border-bottom: 1px solid var(--line); cursor: pointer;
+    padding: 14px 16px; display: grid; grid-template-columns: 14px 1fr; gap: 13px; align-items: start; transition: background .25s;
   }
   .subgen:last-child { border-bottom: 0; }
-  .subgen::before { content: ""; grid-column: 1; grid-row: 1 / span 2; align-self: start; width: 14px; height: 14px; margin-top: 3px; border: 2px solid var(--ink); background: var(--paper); }
-  .subgen[aria-pressed=true] { background: var(--paper); }
-  .subgen[aria-pressed=true]::before { background: var(--red); box-shadow: inset 0 0 0 2px var(--paper); }
-  .subgen .sg-name { grid-column: 2; font-family: var(--cond); text-transform: uppercase; font-weight: 700; font-size: 14px; }
-  .subgen[aria-pressed=true] .sg-name { color: var(--red); }
-  .subgen .sg-desc { grid-column: 2; font-size: 11.5px; color: var(--ink-soft); line-height: 1.35; }
+  .subgen:hover { background: var(--bg-2); }
+  .subgen::before { content: ""; grid-column: 1; grid-row: 1 / span 2; align-self: start; width: 9px; height: 9px; margin-top: 5px; border-radius: 50%; border: 1px solid var(--line-2); transition: background .25s, border-color .25s; }
+  .subgen[aria-pressed=true] { background: var(--bg-2); }
+  .subgen[aria-pressed=true]::before { background: var(--fg); border-color: var(--fg); }
+  .subgen .sg-name { grid-column: 2; font-family: var(--display); font-weight: 500; font-size: 14px; letter-spacing: 0.01em; color: var(--fg-2); }
+  .subgen[aria-pressed=true] .sg-name { color: var(--fg); }
+  .subgen .sg-desc { grid-column: 2; font-size: 12.5px; color: var(--fg-faint); line-height: 1.45; margin-top: 2px; }
 
   .toggle-row { display: flex; align-items: center; justify-content: space-between; }
-  .stamp-toggle { font-family: var(--display); font-size: 16px; text-transform: uppercase; border: 2px solid var(--ink); padding: 5px 12px 3px; cursor: pointer; color: var(--ink-soft); background: var(--paper); user-select: none; transform: rotate(-2deg); }
-  .stamp-toggle[aria-checked=true] { background: var(--red); color: var(--paper-3); border-color: var(--red); }
+  .toggle { position: relative; width: 46px; height: 24px; background: var(--bg-2); border: 1px solid var(--line-2); border-radius: 24px; cursor: pointer; transition: background .25s, border-color .25s; flex: none; }
+  .toggle::after { content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: var(--fg-faint); transition: transform .25s var(--ease), background .25s; }
+  .toggle[aria-checked=true] { border-color: var(--fg); }
+  .toggle[aria-checked=true]::after { transform: translateX(22px); background: var(--fg); }
 
   .btn-forge {
-    width: 100%; margin-top: 6px; font-family: var(--display); text-transform: uppercase; letter-spacing: 0.03em; font-size: 20px;
-    color: var(--paper-3); background: var(--ink); border: 3px solid var(--ink); padding: 14px; cursor: pointer;
-    display: flex; align-items: center; justify-content: center; gap: 10px; transition: background .15s ease;
+    width: 100%; margin-top: 6px; font-family: var(--display); font-weight: 500; font-size: 16px; letter-spacing: 0.01em;
+    color: var(--bg); background: var(--fg); border: 1px solid var(--fg); border-radius: var(--r); padding: 16px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 10px; transition: background .25s, color .25s, transform .15s var(--ease);
   }
-  .btn-forge:hover { background: var(--red); }
-  .btn-forge:disabled { background: var(--ink-soft); border-color: var(--ink-soft); cursor: wait; }
+  .btn-forge:hover { background: transparent; color: var(--fg); }
+  .btn-forge:active { transform: scale(0.99); }
+  .btn-forge:disabled { opacity: 0.5; cursor: wait; background: var(--fg); color: var(--bg); }
 
-  /* folha de resultado */
-  .sheet { position: relative; z-index: 1; background: var(--paper-3); border: 3px solid var(--ink); min-height: 480px; display: flex; flex-direction: column; }
-  .sheet-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 14px 16px 14px 16px; border-bottom: 3px solid var(--ink); }
-  .sheet-head h3 { font-family: var(--display); font-size: 22px; text-transform: uppercase; }
-  .result-meta { display: flex; gap: 6px; margin-left: auto; flex-wrap: wrap; }
-  .chip { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink); border: 1px solid var(--ink); padding: 3px 8px; }
-  .chip.hot { background: var(--red); color: var(--paper-3); border-color: var(--red); }
-  .eq { display: none; gap: 3px; height: 18px; align-items: flex-end; margin-left: 6px; }
+  /* RESULTADO */
+  .result { display: flex; flex-direction: column; min-height: 100%; }
+  .result-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding-bottom: 22px; margin-bottom: 24px; border-bottom: 1px solid var(--line); }
+  .result-head h3 { font-family: var(--display); font-weight: 400; font-size: 17px; letter-spacing: 0.01em; }
+  .result-meta { display: flex; gap: 7px; margin-left: auto; flex-wrap: wrap; }
+  .chip { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--fg-dim); border: 1px solid var(--line); border-radius: 5px; padding: 4px 9px; }
+  .chip.hot { color: var(--fg); border-color: var(--line-2); }
+  .eq { display: none; gap: 3px; height: 16px; align-items: flex-end; margin-left: 4px; }
   .eq.on { display: flex; }
-  .eq i { width: 4px; background: var(--red); animation: eq .5s infinite alternate; }
+  .eq i { width: 3px; background: var(--fg); animation: eq .5s infinite alternate; }
   .eq i:nth-child(2){animation-delay:.15s} .eq i:nth-child(3){animation-delay:.35s} .eq i:nth-child(4){animation-delay:.2s} .eq i:nth-child(5){animation-delay:.45s}
-  @keyframes eq { from { height: 4px; } to { height: 18px; } }
+  @keyframes eq { from { height: 3px; } to { height: 16px; } }
 
-  /* empurra o conteúdo do resultado pra direita, liberando a zona onde o cupom invade */
-  .sheet-body { padding: 18px 18px 18px 64px; flex: 1; display: flex; flex-direction: column; }
-  .structure { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
-  .seg { font-family: var(--mono); font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink); border: 1px solid var(--ink); border-left: 4px solid var(--red); padding: 5px 10px; }
+  .structure { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 20px; }
+  .seg { font-family: var(--mono); font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--fg-dim); border: 1px solid var(--line); border-radius: 5px; padding: 6px 11px; }
 
-  .tab-wrap { flex: 1; background: var(--paper); border: 2px solid var(--ink); padding: 14px; overflow-x: auto; }
-  .tab { font-family: var(--mono); font-size: 14px; line-height: 1.85; white-space: pre; color: var(--ink); }
-  .tab.stamp { animation: stamp .45s ease-out; }
-  @keyframes stamp { 0% { transform: translate(-2px,-2px); color: var(--red); } 100% { transform: none; } }
+  .tab-wrap { flex: 1; background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--r); padding: 22px; overflow-x: auto; }
+  .tab { font-family: var(--mono); font-size: 14px; line-height: 1.9; white-space: pre; color: var(--fg); }
+  .tab.stamp { animation: stamp .5s var(--ease); }
+  @keyframes stamp { 0% { opacity: 0.3; filter: blur(2px); } 100% { opacity: 1; filter: none; } }
 
-  .toolbar { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
-  .tool-btn { font-family: var(--cond); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; font-size: 13px; color: var(--ink); background: var(--paper); border: 2px solid var(--ink); padding: 8px 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; }
-  .tool-btn:hover { background: var(--ink); color: var(--paper-3); }
-  .tool-btn:hover svg { stroke: var(--paper-3); }
-  .tool-btn svg { width: 14px; height: 14px; stroke: var(--ink); }
-  .tool-btn.primary { background: var(--red); color: var(--paper-3); border-color: var(--red); }
-  .tool-btn.primary svg { stroke: var(--paper-3); fill: var(--paper-3); }
+  .toolbar { display: flex; gap: 9px; margin-top: 20px; flex-wrap: wrap; }
+  .tool-btn { font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--fg-dim); background: transparent; border: 1px solid var(--line-2); border-radius: var(--r); padding: 10px 15px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: color .25s, border-color .25s, background .25s; }
+  .tool-btn:hover { color: var(--fg); border-color: var(--fg); }
+  .tool-btn svg { width: 14px; height: 14px; stroke: currentColor; }
+  .tool-btn.primary { color: var(--fg); border-color: var(--line-2); }
 
-  .forging { display: none; flex-direction: column; align-items: center; justify-content: center; flex: 1; gap: 12px; text-align: center; }
+  .forging { display: none; flex-direction: column; align-items: center; justify-content: center; flex: 1; gap: 16px; text-align: center; padding: 40px 0; }
   .forging.on { display: flex; }
-  .forging .msg { font-family: var(--display); font-size: 22px; text-transform: uppercase; }
-  .forging .bar { font-family: var(--mono); font-size: 13px; color: var(--red); }
-  .forging .sub { font-family: var(--mono); font-size: 11px; color: var(--ink-soft); }
+  .forging .msg { font-family: var(--display); font-weight: 300; font-size: 19px; letter-spacing: 0.01em; }
+  .forging .dots { display: flex; gap: 6px; }
+  .forging .dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--fg-faint); animation: pulse 1.2s infinite; }
+  .forging .dots i:nth-child(2){animation-delay:.2s} .forging .dots i:nth-child(3){animation-delay:.4s}
+  @keyframes pulse { 0%,100%{opacity:.25;transform:scale(.8)} 50%{opacity:1;transform:scale(1)} }
+  .forging .sub { font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; color: var(--fg-faint); }
 
-  /* ===================================================================
-     ARSENAL — caixas riscadas (HQ)
-  =================================================================== */
-  .arsenal-list { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 3px solid var(--ink); border-left: 3px solid var(--ink); }
-  .ars { padding: 20px 18px; border-right: 3px solid var(--ink); border-bottom: 3px solid var(--ink); }
-  .ars .x { font-family: var(--display); color: var(--red); font-size: 22px; line-height: 1; display: block; margin-bottom: 8px; }
-  .ars h3 { font-family: var(--cond); font-weight: 700; text-transform: uppercase; font-size: 18px; margin-bottom: 4px; }
-  .ars p { font-size: 14px; color: var(--ink-2); }
+  /* ---------- RECURSOS ---------- */
+  .feat-grid { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+  .feat { padding: 38px 30px 44px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); transition: background .3s var(--ease); }
+  .feat:hover { background: var(--bg-2); }
+  .feat .fn { font-family: var(--mono); font-size: 12px; color: var(--fg-faint); letter-spacing: 0.1em; }
+  .feat h3 { font-size: 20px; font-weight: 400; letter-spacing: -0.01em; margin: 18px 0 10px; }
+  .feat p { color: var(--fg-2); font-weight: 300; font-size: 14.5px; }
 
-  /* ===================================================================
-     CTA + COLOFÃO
-  =================================================================== */
-  .cta { padding: 0; border-bottom: 3px solid var(--ink); }
-  .cta-box { background: var(--ink); color: var(--paper-2); padding: 64px 26px; text-align: center; }
-  .cta-box h2 { font-size: clamp(34px, 6vw, 70px); margin-bottom: 14px; }
-  .cta-box h2 .red { color: var(--red); }
-  .cta-box p { font-family: var(--mono); font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--paper); margin-bottom: 26px; }
-  .cta-box .btn-blk { background: var(--red); border-color: var(--paper-3); }
-  .cta-box .btn-blk:hover { background: var(--paper-3); color: var(--ink); }
+  /* ---------- CTA ---------- */
+  .cta { padding: 150px 0; text-align: center; border-top: 1px solid var(--line); }
+  .cta h2 { font-size: clamp(38px, 7vw, 92px); font-weight: 300; letter-spacing: -0.04em; line-height: 1.0; }
+  .cta p { color: var(--fg-2); font-weight: 300; margin: 26px 0 40px; font-size: 17px; }
+  .cta .btn-cta { display: inline-flex; align-items: center; gap: 12px; font-family: var(--display); font-weight: 500; font-size: 16px; color: var(--bg); background: var(--fg); border: 1px solid var(--fg); border-radius: 100px; padding: 15px 30px; cursor: pointer; transition: background .25s, color .25s; }
+  .cta .btn-cta:hover { background: transparent; color: var(--fg); }
 
-  .colophon { padding: 32px 36px 28px; }
-  .col-grid { display: grid; grid-template-columns: 1.6fr 1fr 1fr; gap: 26px; margin-bottom: 24px; }
-  .col-brand b { font-family: var(--display); font-size: 26px; }
-  .col-brand b i { color: var(--red); font-style: normal; }
-  .col-brand p { font-family: var(--mono); font-size: 12px; color: var(--ink-soft); max-width: 320px; margin-top: 8px; }
-  .col h4 { font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 11px; }
-  .col a { display: block; color: var(--ink); text-decoration: none; font-family: var(--cond); text-transform: uppercase; font-size: 14px; letter-spacing: 0.04em; margin-bottom: 7px; }
-  .col a:hover { color: var(--red); }
-  .col-bottom { border-top: 3px solid var(--ink); padding-top: 16px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-soft); }
+  /* ---------- FOOTER ---------- */
+  footer { border-top: 1px solid var(--line); padding: 50px 0 40px; }
+  .foot-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 30px; flex-wrap: wrap; margin-bottom: 50px; }
+  .foot-brand { font-family: var(--display); font-weight: 500; font-size: 22px; letter-spacing: -0.02em; }
+  .foot-links { display: flex; gap: 40px; flex-wrap: wrap; }
+  .foot-col h4 { font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--fg-faint); margin-bottom: 14px; }
+  .foot-col a { display: block; color: var(--fg-2); font-size: 14px; margin-bottom: 9px; transition: color .25s; }
+  .foot-col a:hover { color: var(--fg); }
+  .foot-bottom { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--fg-faint); border-top: 1px solid var(--line); padding-top: 24px; }
 
   /* toast */
-  .toast { position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%) translateY(18px); background: var(--ink); color: var(--paper-3); padding: 11px 20px; font-family: var(--cond); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; font-size: 14px; opacity: 0; pointer-events: none; transition: all .25s ease; z-index: 300; border-left: 4px solid var(--red); }
+  .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--fg); color: var(--bg); padding: 12px 22px; border-radius: 100px; font-family: var(--mono); font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; opacity: 0; pointer-events: none; transition: all .35s var(--ease); z-index: 300; }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-  /* ===================================================================
-     RESPONSIVO — desmonta a colagem no mobile
-  =================================================================== */
-  @media (max-width: 900px) {
-    .process-list, .arsenal-list { grid-template-columns: 1fr; }
-    .pstep { border-left: 0; border-bottom: 3px solid var(--ink); }
-    .pstep:last-child { border-bottom: 0; }
-    .ars { border-right: 0; }
-    .col-grid { grid-template-columns: 1fr 1fr; }
-    .printout { position: static; width: 100%; transform: none; margin-top: 28px; box-shadow: 6px 6px 0 var(--ink); }
-    .hero { min-height: 0; }
-    .forge-collage { grid-template-columns: 1fr; }
-    .coupon { margin: 0 0 -14px 0; transform: none; z-index: 10; }
-    .sheet-body { padding: 16px; }
-    .mh-title { font-size: 19vw; }
-  }
-  @media (max-width: 560px) {
-    .col-grid { grid-template-columns: 1fr; }
-    .mh-nav a, .mh-nav button { flex: 1 1 100%; border-left: 0; border-top: 3px solid var(--ink); }
-    .mh-nav > :first-child { border-top: 0; }
+  /* responsivo */
+  @media (max-width: 880px) {
+    .tool-grid, .feat-grid { grid-template-columns: 1fr; }
+    .feat { border-right: 0; }
+    .step { grid-template-columns: 1fr; gap: 10px; }
+    .nav-links { display: none; }
+    .has-cursor, .has-cursor * { cursor: auto; }
+    .cursor, .cursor-ring { display: none; }
   }
 </style>
 </head>
 <body>
+  <div class="cursor" aria-hidden="true"></div>
+  <div class="cursor-ring" aria-hidden="true"></div>
 
-  <!-- MASTHEAD DE JORNAL -->
-  <div class="masthead" id="nav">
-    <div class="mh-dateline">
-      <span>Edição Nº 01 — 2026</span>
-      <span class="mid">★ Zine Sonora ★</span>
-      <span>Preço: seu tímpano</span>
+  <!-- NAV -->
+  <nav class="nav" id="nav">
+    <div class="nav-in">
+      <a href="#" class="brand">RiffForge<span class="dot">.</span></a>
+      <div class="nav-links">
+        <a href="#como" data-scroll>Processo</a>
+        <a href="#forja" data-scroll>Ferramenta</a>
+        <a href="#recursos" data-scroll>Recursos</a>
+      </div>
     </div>
-    <div class="mh-title">RIFF<i>FORGE</i></div>
-    <nav class="mh-nav">
-      <span class="tag">Máquina de riffs</span>
-      <a href="#como">O processo</a>
-      <a href="#forja">A forja</a>
-      <a href="#recursos">Arsenal</a>
-      <button class="forjar" onclick="document.getElementById('forja').scrollIntoView()">Forjar ▸</button>
-    </nav>
+  </nav>
+
+  <!-- HERO -->
+  <header class="hero">
+    <div class="wrap">
+      <span class="kicker reveal">Gerador de tablaturas · metal</span>
+      <h1 data-split>Riffs graves, <em>sem ruído.</em></h1>
+      <p class="sub reveal">Afinação, andamento e subgênero entram. A tablatura sai pronta — do Death ao Djent. Método no lugar de inspiração.</p>
+      <div class="hero-actions reveal">
+        <button class="link-arrow" data-target="forja">Forjar um riff <span class="ar">→</span></button>
+        <button class="link-muted" data-target="como">Ver o processo</button>
+      </div>
+      <div class="hero-foot reveal">
+        <span class="idx">001 — Máquina determinística</span>
+        <span class="scrollcue">Scroll <span class="ln"></span></span>
+      </div>
+    </div>
+  </header>
+
+  <!-- TICKER -->
+  <div class="ticker" aria-hidden="true">
+    <div class="ticker-track">
+      <span>Drop B <b>/</b> Drop A <b>/</b> Drop C <b>/</b> Standard E <b>·</b> Death <b>/</b> Groove <b>/</b> Djent <b>/</b> Metalcore <b>/</b> Black <b>·</b> Chug <b>/</b> Gallop <b>/</b> Tremolo <b>/</b> Breakdown <b>·</b>&nbsp;</span>
+      <span>Drop B <b>/</b> Drop A <b>/</b> Drop C <b>/</b> Standard E <b>·</b> Death <b>/</b> Groove <b>/</b> Djent <b>/</b> Metalcore <b>/</b> Black <b>·</b> Chug <b>/</b> Gallop <b>/</b> Tremolo <b>/</b> Breakdown <b>·</b>&nbsp;</span>
+    </div>
   </div>
 
-  <main class="page">
-
-    <!-- HERO PÔSTER -->
-    <header class="hero">
-      <!-- printout colado torto, por cima do pôster -->
-      <figure class="printout reveal" aria-label="Exemplo de tablatura">
-        <span class="tape l"></span><span class="tape r"></span>
-        <div class="printout-head">
-          <span class="stamp">Saída</span>
-          <span id="demoTuning">Drop B</span><span class="sep">/</span>
-          <span id="demoBpm">180 BPM</span><span class="sep">/</span>
-          <span id="demoGen">Death Metal</span>
-        </div>
-        <pre class="demo-tab" id="demoTab"></pre>
-      </figure>
-
-      <div class="hero-inner reveal">
-        <div class="tagline">Máquina de riffs · do Death ao Djent</div>
-        <h1>
-          <span class="l">Riff grave,</span>
-          <span class="l l2">forjado <span class="red">na marra</span>.</span>
-        </h1>
-        <p class="lede">Escolhe a afinação, o andamento e o subgênero. A máquina cospe <b>tablatura pronta</b> — sem ficar encarando o braço da guitarra esperando inspiração baixar.</p>
-        <div class="hero-ctas">
-          <button class="btn-blk" onclick="document.getElementById('forja').scrollIntoView()">Forjar meu riff</button>
-          <button class="btn-out" onclick="document.getElementById('como').scrollIntoView()">Ver o processo</button>
-        </div>
-        <div class="hero-trust">
-          <span>Afinações graves</span>
-          <span>Estrutura completa</span>
-          <span>Exporta em texto</span>
-        </div>
+  <!-- PROCESSO -->
+  <section class="band" id="como">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="kicker reveal">/ Processo</span>
+        <h2 data-split>Três passos. Uma tablatura.</h2>
+        <p class="reveal">Sem teoria, sem bloqueio. Você define a matéria-prima, o motor resolve as regras duras, você leva pronto.</p>
       </div>
-    </header>
-
-    <!-- FAIXA MANIFESTO -->
-    <div class="strip" aria-hidden="true">
-      <div class="strip-track">
-        <span>Sem teoria &nbsp;<i>✦</i>&nbsp; Sem bloqueio &nbsp;<i>✦</i>&nbsp; Só peso &nbsp;<i>✦</i>&nbsp; Drop B / Drop A / Drop C &nbsp;<i>✦</i>&nbsp; Chug · Gallop · Tremolo · Breakdown &nbsp;<i>✦</i>&nbsp;</span>
-        <span>Sem teoria &nbsp;<i>✦</i>&nbsp; Sem bloqueio &nbsp;<i>✦</i>&nbsp; Só peso &nbsp;<i>✦</i>&nbsp; Drop B / Drop A / Drop C &nbsp;<i>✦</i>&nbsp; Chug · Gallop · Tremolo · Breakdown &nbsp;<i>✦</i>&nbsp;</span>
+      <div class="steps">
+        <div class="step reveal">
+          <span class="n">01 / Entrada</span>
+          <div>
+            <h3>Defina os parâmetros</h3>
+            <p>Afinação, andamento em BPM e subgênero. Blast beats opcional, quando o peso pede.</p>
+          </div>
+        </div>
+        <div class="step reveal">
+          <span class="n">02 / Motor</span>
+          <div>
+            <h3>O motor resolve</h3>
+            <p>Ritmo e estrutura coerentes com a afinação e o subgênero — calculados, não chutados.</p>
+          </div>
+        </div>
+        <div class="step reveal">
+          <span class="n">03 / Saída</span>
+          <div>
+            <h3>Leve pronto</h3>
+            <p>Copie, gere variações infinitas ou exporte como texto puro. O riff é seu.</p>
+          </div>
+        </div>
       </div>
     </div>
+  </section>
 
-    <!-- PROCESSO -->
-    <section id="como" class="panel">
-      <span class="fig">[ Fig. 01 — Método ]</span>
-      <div class="sec-top reveal">
-        <h2>O processo</h2>
-        <span class="no">[ Três passos / uma tab ]</span>
-      </div>
-      <div class="process-list reveal">
-        <div class="pstep">
-          <span class="pn">01</span>
-          <h3>Define a matéria-prima</h3>
-          <p>Afinação, andamento em BPM e subgênero. Quer peso total? Liga o blast beat e pronto.</p>
-        </div>
-        <div class="pstep">
-          <span class="pn">02</span>
-          <h3>A máquina forja</h3>
-          <p>O motor monta um riff coerente com o ritmo escolhido e sugere uma estrutura — intro, peso, breakdown e saída.</p>
-        </div>
-        <div class="pstep">
-          <span class="pn">03</span>
-          <h3>Copia, varia, exporta</h3>
-          <p>Não curtiu? Forja de novo. Cada martelada cospe uma versão nova. Leva a tab como texto pro ensaio.</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- A FORJA -->
-    <section id="forja" class="panel">
-      <span class="fig">[ Fig. 02 — Bigorna ]</span>
-      <div class="sec-top reveal">
-        <h2>A forja</h2>
-        <span class="no">[ Preenche o cupom → martela ]</span>
+  <!-- FERRAMENTA -->
+  <section class="band" id="forja">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="kicker reveal">/ Ferramenta</span>
+        <h2 data-split>Forje.</h2>
+        <p class="reveal">Ajuste os parâmetros. O resultado aparece à direita.</p>
       </div>
 
-      <div class="forge-collage reveal">
-        <!-- cupom invade o resultado -->
-        <div class="coupon">
-          <div class="coupon-h">Cupom de forja</div>
-          <div class="coupon-sub">Preenche e bate o martelo</div>
+      <div class="tool-grid reveal">
+        <!-- controles -->
+        <div class="panel">
+          <span class="panel-label mono-label">Parâmetros</span>
 
           <div class="field">
             <label for="afinacao">Afinação</label>
@@ -448,98 +383,93 @@
 
           <div class="field toggle-row">
             <label style="margin:0">Blast beats</label>
-            <div class="stamp-toggle" id="blast" role="switch" tabindex="0" aria-checked="false" aria-label="Blast beats">Off</div>
+            <div class="toggle" id="blast" role="switch" tabindex="0" aria-checked="false" aria-label="Blast beats"></div>
           </div>
 
-          <button class="btn-forge" id="forjar">Forjar riff ▸</button>
+          <button class="btn-forge" id="forjar">Forjar riff</button>
         </div>
 
-        <!-- folha de resultado -->
-        <div class="sheet">
-          <div class="sheet-head">
-            <h3>Riff forjado</h3>
+        <!-- resultado -->
+        <div class="panel result">
+          <div class="result-head">
+            <h3>Riff gerado</h3>
             <div class="eq" id="eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
             <div class="result-meta" id="resultMeta"></div>
           </div>
 
-          <div class="sheet-body">
-            <div class="forging" id="forging">
-              <div class="msg" id="forgingMsg">Prensando…</div>
-              <div class="bar">▰▰▰▰▱▱▱▱</div>
-              <div class="sub">temperando o aço sonoro</div>
-            </div>
+          <div class="forging" id="forging">
+            <div class="dots"><i></i><i></i><i></i></div>
+            <div class="msg" id="forgingMsg">Gerando…</div>
+            <div class="sub">resolvendo o ritmo</div>
+          </div>
 
-            <div id="output" style="display:flex; flex-direction:column; flex:1;">
-              <div class="structure" id="structure"></div>
-              <div class="tab-wrap"><pre class="tab" id="tab"></pre></div>
-              <div class="toolbar">
-                <button class="tool-btn primary" id="btnPlay"><svg viewBox="0 0 24 24" fill="none"><path d="M7 5l12 7-12 7V5z" fill="currentColor"/></svg> Reproduzir</button>
-                <button class="tool-btn" id="btnVary"><svg viewBox="0 0 24 24" fill="none"><path d="M4 4v6h6M20 20v-6h-6M20 9a8 8 0 00-14-3M4 15a8 8 0 0014 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Variação</button>
-                <button class="tool-btn" id="btnCopy"><svg viewBox="0 0 24 24" fill="none"><rect x="9" y="9" width="11" height="11" rx="1" stroke="currentColor" stroke-width="2"/><path d="M5 15V5a2 2 0 012-2h10" stroke="currentColor" stroke-width="2"/></svg> Copiar</button>
-                <button class="tool-btn" id="btnExport"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0l4-4m-4 4l-4-4M5 21h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Exportar</button>
-              </div>
+          <div id="output" style="display:flex; flex-direction:column; flex:1;">
+            <div class="structure" id="structure"></div>
+            <div class="tab-wrap"><pre class="tab" id="tab"></pre></div>
+            <div class="toolbar">
+              <button class="tool-btn primary" id="btnPlay"><svg viewBox="0 0 24 24" fill="none"><path d="M7 5l12 7-12 7V5z" fill="currentColor" stroke="none"/></svg> Reproduzir</button>
+              <button class="tool-btn" id="btnVary"><svg viewBox="0 0 24 24" fill="none"><path d="M4 4v6h6M20 20v-6h-6M20 9a8 8 0 00-14-3M4 15a8 8 0 0014 3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Variação</button>
+              <button class="tool-btn" id="btnCopy"><svg viewBox="0 0 24 24" fill="none"><rect x="9" y="9" width="11" height="11" rx="2" stroke-width="2"/><path d="M5 15V5a2 2 0 012-2h10" stroke-width="2"/></svg> Copiar</button>
+              <button class="tool-btn" id="btnExport"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0l4-4m-4 4l-4-4M5 21h14" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Exportar</button>
             </div>
           </div>
         </div>
       </div>
-    </section>
+    </div>
+  </section>
 
-    <!-- ARSENAL -->
-    <section id="recursos" class="panel">
-      <span class="fig">[ Fig. 03 — Arsenal ]</span>
-      <div class="sec-top reveal">
-        <h2>Arsenal</h2>
-        <span class="no">[ O que entra na lâmina ]</span>
+  <!-- RECURSOS -->
+  <section class="band" id="recursos">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="kicker reveal">/ Recursos</span>
+        <h2 data-split>Construído para o peso.</h2>
       </div>
-      <div class="arsenal-list reveal">
-        <div class="ars"><span class="x">✦</span><h3>Afinações graves</h3><p>Drop B, Drop A, Drop C e standard. As notas saem certas pra cada afinação.</p></div>
-        <div class="ars"><span class="x">✦</span><h3>Ritmo por subgênero</h3><p>Cada subgênero tem sua célula rítmica: chug, gallop, tremolo, breakdown.</p></div>
-        <div class="ars"><span class="x">✦</span><h3>Estrutura completa</h3><p>Não é só um riff solto: intro, verso, breakdown e saída encadeados.</p></div>
-        <div class="ars"><span class="x">✦</span><h3>Variação infinita</h3><p>Mesmos parâmetros, riff novo a cada martelada. Forja até cair o que serve.</p></div>
-        <div class="ars"><span class="x">✦</span><h3>Tab em texto puro</h3><p>Copia ou exporta como ASCII. Sem amarra, sem formato fechado — o riff é seu.</p></div>
-        <div class="ars"><span class="x">✦</span><h3>Roda sem IA</h3><p>O motor é lógica pura. Funciona offline e na unha; a IA é só tempero opcional.</p></div>
+      <div class="feat-grid reveal">
+        <div class="feat"><span class="fn">01</span><h3>Afinações graves</h3><p>Drop B, Drop A, Drop C e standard. As notas respeitam a afinação.</p></div>
+        <div class="feat"><span class="fn">02</span><h3>Ritmo por subgênero</h3><p>Cada subgênero tem sua célula: chug, gallop, tremolo, breakdown.</p></div>
+        <div class="feat"><span class="fn">03</span><h3>Estrutura completa</h3><p>Não só um riff: intro, verso, breakdown e saída encadeados.</p></div>
+        <div class="feat"><span class="fn">04</span><h3>Variação infinita</h3><p>Mesmos parâmetros, resultado novo a cada chamada.</p></div>
+        <div class="feat"><span class="fn">05</span><h3>Texto puro</h3><p>Copie ou exporte como ASCII. Sem formato fechado.</p></div>
+        <div class="feat"><span class="fn">06</span><h3>Lógica, não mágica</h3><p>O motor é determinístico. Funciona sem IA; a IA é tempero opcional.</p></div>
       </div>
-    </section>
+    </div>
+  </section>
 
-    <!-- CTA -->
-    <section class="cta">
-      <div class="cta-box reveal">
-        <h2>Chega de <span class="red">página em branco</span>.</h2>
-        <p>A bigorna tá quente. Bate o martelo.</p>
-        <button class="btn-blk" onclick="document.getElementById('forja').scrollIntoView()">Forjar agora</button>
-      </div>
-    </section>
+  <!-- CTA -->
+  <section class="cta">
+    <div class="wrap">
+      <h2 data-split>Comece a forjar.</h2>
+      <p class="reveal">A próxima ideia está a um parâmetro de distância.</p>
+      <button class="btn-cta reveal" data-target="forja">Forjar agora <span>→</span></button>
+    </div>
+  </section>
 
-    <!-- COLOFÃO -->
-    <footer class="colophon">
-      <div class="col-grid">
-        <div class="col-brand">
-          <b>RIFF<i>FORGE</i></b>
-          <p>Zine sonora / máquina de riffs graves. Feito pra quem leva o peso a sério. Edição Nº 01.</p>
-        </div>
-        <div class="col">
-          <h4>Seções</h4>
-          <a href="#forja">A forja</a><a href="#recursos">Arsenal</a><a href="#como">O processo</a>
-        </div>
-        <div class="col">
-          <h4>Projeto</h4>
-          <a href="https://github.com/Zanin777/RiffForge" target="_blank" rel="noopener">GitHub</a><a href="#">Sobre</a><a href="#">Contato</a>
+  <!-- FOOTER -->
+  <footer>
+    <div class="wrap">
+      <div class="foot-top">
+        <div class="foot-brand">RiffForge<span style="color:var(--fg-faint)">.</span></div>
+        <div class="foot-links">
+          <div class="foot-col"><h4>Produto</h4><a href="#forja" data-scroll>Ferramenta</a><a href="#recursos" data-scroll>Recursos</a><a href="#como" data-scroll>Processo</a></div>
+          <div class="foot-col"><h4>Projeto</h4><a href="https://github.com/Zanin777/RiffForge" target="_blank" rel="noopener">GitHub</a><a href="#">Sobre</a><a href="#">Contato</a></div>
         </div>
       </div>
-      <div class="col-bottom">
-        <span>© 2026 RiffForge — forjado na unha</span>
+      <div class="foot-bottom">
+        <span>© 2026 RiffForge</span>
         <span>HTML · CSS · JS / Java no motor</span>
       </div>
-    </footer>
-
-  </main>
+    </div>
+  </footer>
 
   <div class="toast" id="toast"></div>
   <audio id="som-forja" src="https://assets.mixkit.co/active_storage/sfx/2533/2533-preview.mp3" preload="auto"></audio>
 
+<script src="https://unpkg.com/lenis@1.1.14/dist/lenis.min.js"></script>
 <script>
   const $ = (id) => document.getElementById(id);
   const som = $('som-forja');
+  const RM = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   const TUNINGS = {
     'Drop B':['B','F#','B','E','G#','C#'], 'Drop A':['A','E','A','D','F#','B'],
@@ -586,7 +516,7 @@
     return linhas.join('\n');
   }
 
-  // ===== Estado da ferramenta =====
+  // ===== Estado =====
   let estado = { afinacao: 'Drop B', bpm: 180, subgenero: 'Death Metal', blastBeats: false };
 
   function pintarNotas() {
@@ -595,9 +525,7 @@
   $('afinacao').addEventListener('change', e => { estado.afinacao = e.target.value; pintarNotas(); });
 
   const bpm = $('bpm');
-  function pintarBpm() {
-    estado.bpm = Number(bpm.value); $('bpmOut').textContent = bpm.value;
-  }
+  function pintarBpm() { estado.bpm = Number(bpm.value); $('bpmOut').textContent = bpm.value; }
   bpm.addEventListener('input', pintarBpm);
 
   $('subgenGrid').innerHTML = Object.keys(SUBGEN).map((k, i) =>
@@ -613,13 +541,13 @@
   const blast = $('blast');
   function toggleBlast() {
     const v = blast.getAttribute('aria-checked') !== 'true';
-    blast.setAttribute('aria-checked', String(v)); blast.textContent = v ? 'On' : 'Off'; estado.blastBeats = v;
+    blast.setAttribute('aria-checked', String(v)); estado.blastBeats = v;
   }
   blast.addEventListener('click', toggleBlast);
   blast.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggleBlast(); } });
 
   // ===== Forjar =====
-  const MSGS = ['Prensando…', 'Martelando o aço…', 'Temperando a lâmina…'];
+  const MSGS = ['Gerando…', 'Calculando posições…', 'Resolvendo o ritmo…'];
   function renderResultado() {
     $('structure').innerHTML = (ESTRUTURAS[estado.subgenero] || []).map(s => `<span class="seg">${s}</span>`).join('');
     $('resultMeta').innerHTML = [
@@ -655,40 +583,96 @@
   $('btnPlay').addEventListener('click', () => {
     tocando = !tocando; $('eq').classList.toggle('on', tocando);
     $('btnPlay').innerHTML = tocando
-      ? '<svg viewBox="0 0 24 24" fill="none"><rect x="6" y="5" width="4" height="14" fill="currentColor"/><rect x="14" y="5" width="4" height="14" fill="currentColor"/></svg> Pausar'
-      : '<svg viewBox="0 0 24 24" fill="none"><path d="M7 5l12 7-12 7V5z" fill="currentColor"/></svg> Reproduzir';
-    if (tocando) setTimeout(() => { tocando = false; $('eq').classList.remove('on'); $('btnPlay').innerHTML = '<svg viewBox="0 0 24 24" fill="none"><path d="M7 5l12 7-12 7V5z" fill="currentColor"/></svg> Reproduzir'; }, 3000);
+      ? '<svg viewBox="0 0 24 24" fill="none"><rect x="6" y="5" width="4" height="14" fill="currentColor" stroke="none"/><rect x="14" y="5" width="4" height="14" fill="currentColor" stroke="none"/></svg> Pausar'
+      : '<svg viewBox="0 0 24 24" fill="none"><path d="M7 5l12 7-12 7V5z" fill="currentColor" stroke="none"/></svg> Reproduzir';
+    if (tocando) setTimeout(() => { tocando = false; $('eq').classList.remove('on'); $('btnPlay').innerHTML = '<svg viewBox="0 0 24 24" fill="none"><path d="M7 5l12 7-12 7V5z" fill="currentColor" stroke="none"/></svg> Reproduzir'; }, 3000);
   });
 
-  // ===== Demo da capa =====
-  const DEMOS = [
-    { t: 'Drop B', b: 180, g: 'Death Metal' },
-    { t: 'Drop C', b: 140, g: 'Groove Metal' },
-    { t: 'Drop A', b: 200, g: 'Djent' },
-  ];
-  let di = 0;
-  function rodarDemo() {
-    const d = DEMOS[di]; di = (di + 1) % DEMOS.length;
-    $('demoTuning').textContent = d.t; $('demoBpm').textContent = d.b + ' BPM'; $('demoGen').textContent = d.g;
-    const tab = gerar({ afinacao: d.t, subgenero: d.g, blastBeats: d.g === 'Death Metal' });
-    const linhas = tab.split('\n'); const el = $('demoTab');
-    el.textContent = ''; let i = 0;
-    const reduz = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reduz) { el.textContent = tab; setTimeout(rodarDemo, 4000); return; }
-    (function escreve() {
-      if (i < linhas.length) { el.textContent += (i ? '\n' : '') + linhas[i]; i++; setTimeout(escreve, 130); }
-      else { el.innerHTML = tab + '<span class="demo-cursor"></span>'; setTimeout(rodarDemo, 2600); }
-    })();
-  }
+  // ===== Demo (ticker do tab — alimenta os nós, mesmo sem capa dedicada) =====
+  let estadoInicialPronto = false;
 
-  // ===== Navbar scroll + reveals =====
-  addEventListener('scroll', () => { $('nav').classList.toggle('scrolled', scrollY > 20); });
-  const io = new IntersectionObserver((es) => es.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); }), { threshold: 0.12 });
+  // ===== Reveals =====
+  const io = new IntersectionObserver((es) => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); } }), { threshold: 0.14 });
   document.querySelectorAll('.reveal').forEach(el => io.observe(el));
 
-  // ===== Init =====
-  pintarNotas(); pintarBpm(); rodarDemo();
+  // ===== Init básico =====
+  pintarNotas(); pintarBpm();
   forjar(false);
+
+  // ====================================================================
+  //  CAMADA DE MOVIMENTO (smooth scroll + tipografia cinética + cursor)
+  // ====================================================================
+
+  // --- split de texto em palavras (máscara) ---
+  function split(el) {
+    const txt = el.textContent; el.textContent = '';
+    txt.split(/(\s+)/).forEach(tok => {
+      if (/^\s+$/.test(tok)) { el.appendChild(document.createTextNode(' ')); return; }
+      const w = document.createElement('span'); w.className = 'w';
+      const i = document.createElement('span'); i.className = 'w-i'; i.textContent = tok;
+      w.appendChild(i); el.appendChild(w);
+    });
+  }
+  const splits = document.querySelectorAll('[data-split]');
+  if (!RM) {
+    splits.forEach(split);
+    const reveal = (el) => {
+      el.querySelectorAll('.w-i').forEach((s, i) => { s.style.transitionDelay = (i * 0.045) + 's'; });
+      el.classList.add('in');
+    };
+    const sio = new IntersectionObserver((es) => es.forEach(e => { if (e.isIntersecting) { reveal(e.target); sio.unobserve(e.target); } }), { threshold: 0.3 });
+    splits.forEach(el => {
+      const r = el.getBoundingClientRect();
+      if (r.top < innerHeight * 0.9) { setTimeout(() => reveal(el), 120); } else { sio.observe(el); }
+    });
+  } else {
+    splits.forEach(el => el.classList.add('in'));
+  }
+
+  // --- smooth scroll (Lenis) ---
+  let lenis = null;
+  if (!RM && window.Lenis) {
+    lenis = new Lenis({ lerp: 0.09, wheelMultiplier: 1, smoothWheel: true });
+    function raf(t) { lenis.raf(t); requestAnimationFrame(raf); }
+    requestAnimationFrame(raf);
+  }
+  function irPara(id) {
+    const el = document.getElementById(id); if (!el) return;
+    if (lenis) lenis.scrollTo(el, { offset: -10 }); else el.scrollIntoView({ behavior: 'smooth' });
+  }
+  document.querySelectorAll('[data-target]').forEach(b => b.addEventListener('click', () => irPara(b.dataset.target)));
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    const href = a.getAttribute('href');
+    if (href.length > 1) a.addEventListener('click', e => { e.preventDefault(); irPara(href.slice(1)); });
+  });
+
+  // --- nav scrolled ---
+  const nav = $('nav');
+  const onScroll = () => nav.classList.toggle('scrolled', (lenis ? lenis.scroll : scrollY) > 24);
+  if (lenis) lenis.on('scroll', onScroll); else addEventListener('scroll', onScroll);
+  onScroll();
+
+  // --- cursor custom ---
+  const fino = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  if (fino && !RM) {
+    document.documentElement.classList.add('has-cursor');
+    const dot = document.querySelector('.cursor'), ring = document.querySelector('.cursor-ring');
+    let mx = innerWidth/2, my = innerHeight/2, rx = mx, ry = my;
+    addEventListener('mousemove', e => {
+      mx = e.clientX; my = e.clientY;
+      dot.style.transform = `translate(${mx}px,${my}px) translate(-50%,-50%)`;
+    });
+    (function ring_raf() {
+      rx += (mx - rx) * 0.16; ry += (my - ry) * 0.16;
+      ring.style.transform = `translate(${rx}px,${ry}px) translate(-50%,-50%)`;
+      requestAnimationFrame(ring_raf);
+    })();
+    const hov = 'a,button,select,input,label,.subgen,[role=switch]';
+    document.querySelectorAll(hov).forEach(el => {
+      el.addEventListener('mouseenter', () => ring.classList.add('grow'));
+      el.addEventListener('mouseleave', () => ring.classList.remove('grow'));
+    });
+  }
 </script>
 </body>
 </html>
