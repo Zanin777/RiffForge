@@ -21,6 +21,8 @@ Faça sempre esses 4 passos, em ordem:
 
 ## 🎯 Arco 1 — MVP: do zero a uma tab na tela
 
+> 📌 **Status (15/06/2026):** pegamos um atalho "enxuto" — portamos o gerador do front-end direto pra Java, então já temos `POST /api/generate` + tab ASCII funcionando. Por isso as Sessões **1, 3, 8 e 10 estão ✅**, mesmo com as Sessões 2 e 4–7/9 ainda pendentes (modelo rico de dados, MIDI, escalas, validação de tonalidade) — esse é o próximo passo: o "motor de verdade". O front (Sessões 11–12) ainda **não** foi integrado ao back.
+
 ### Semana 1 — Fundação e primeiro JSON
 
 **Sessão 1 — Esqueleto Spring Boot**
@@ -34,9 +36,9 @@ Faça sempre esses 4 passos, em ordem:
 - [ ] ✅ *Feito quando:* o projeto compila sem erro.
 
 **Sessão 3 — Endpoint que responde**
-- [ ] Criar o `GenerateRequest` (DTO) e o `GeracaoController` com `POST /api/generate` devolvendo uma `Musica` hardcoded.
-- [ ] Testar com `curl`.
-- [ ] ✅ *Feito quando:* o `curl` retorna o JSON com afinação e uma seção.
+- [x] Criar o `GenerateRequest` (DTO) e o `GeracaoController` com `POST /api/generate` devolvendo uma `Musica` hardcoded. *(feito como `GenerateController`; a resposta já é **gerada**, não hardcoded)*
+- [x] Testar com `curl`. *(testado via `Invoke-RestMethod`)*
+- [x] ✅ *Feito quando:* o `curl` retorna o JSON com afinação e uma seção.
 
 ### Semana 2 — O núcleo musical (o cérebro)
 
@@ -61,9 +63,9 @@ Faça sempre esses 4 passos, em ordem:
 - [ ] ✅ *Feito quando:* os templates existem e somam as durações certas de um compasso.
 
 **Sessão 8 — Gerador v1 (chug burro)**
-- [ ] Gerar uma lista de `Nota` chugando a corda grave solta no ritmo escolhido.
-- [ ] Plugar no endpoint (substituir o hardcoded).
-- [ ] ✅ *Feito quando:* o `/api/generate` devolve notas geradas pela lógica.
+- [x] Gerar uma lista de `Nota` chugando a corda grave solta no ritmo escolhido. *(o `RiffEngine` faz o chug na corda grave conforme o padrão; ainda sem o record `Nota` — gera ASCII direto)*
+- [x] Plugar no endpoint (substituir o hardcoded).
+- [x] ✅ *Feito quando:* o `/api/generate` devolve notas geradas pela lógica.
 
 **Sessão 9 — Gerador v2 (com altura)**
 - [ ] Variar as alturas escolhendo posições da escala nas cordas graves.
@@ -72,8 +74,8 @@ Faça sempre esses 4 passos, em ordem:
 ### Semana 4 — Renderização e interface
 
 **Sessão 10 — Renderizador ASCII** 🎸
-- [ ] Criar o método que transforma `Musica` em tablatura ASCII (6 linhas, casas + `-`).
-- [ ] ✅ *Feito quando:* o `curl` cospe uma tab ASCII legível. **(Momento mágico!)**
+- [x] Criar o método que transforma `Musica` em tablatura ASCII (6 linhas, casas + `-`). *(renderiza a partir do grid interno; falta alinhar casas de 2 dígitos como `10`)*
+- [x] ✅ *Feito quando:* o `curl` cospe uma tab ASCII legível. **(Momento mágico!)**
 
 **Sessão 11 — Página HTML**
 - [ ] Criar `src/main/resources/static/index.html` com formulário (afinação, BPM, subgênero, blast beat) e uma tag `<pre>` pro resultado.
