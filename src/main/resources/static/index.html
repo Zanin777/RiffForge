@@ -632,7 +632,7 @@
   // --- smooth scroll (Lenis) ---
   let lenis = null;
   if (!RM && window.Lenis) {
-    lenis = new Lenis({ lerp: 0.09, wheelMultiplier: 1, smoothWheel: true });
+    lenis = new Lenis({ lerp: 0.14, wheelMultiplier: 1.45, smoothWheel: true });
     function raf(t) { lenis.raf(t); requestAnimationFrame(raf); }
     requestAnimationFrame(raf);
   }
