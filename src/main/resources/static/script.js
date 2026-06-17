@@ -1,7 +1,6 @@
 /* ============================================================
    RiffForge — script.js
-   Lógica da ferramenta + camada de movimento (smooth scroll,
-   tipografia cinética e cursor custom).
+   Lógica da ferramenta + áudio (Tone.js) + camada de movimento.
    ============================================================ */
 
 /* ---------- Config da API ----------
@@ -41,34 +40,47 @@ const ESTRUTURAS = {
 };
 const FRETS = ['3','5','7','8','10'];
 
-/* ---------- Gerador local (mock — usado no modo demo) ---------- */
-function gerar({ afinacao, subgenero, blastBeats }) {
+/* ============================================================
+   GERADOR — devolve a MATRIZ do riff (cordas × slots) e renderiza ASCII
+   ============================================================ */
+
+/* Gera a matriz: grade[corda][slot] = casa (ex.: '0','7','10') ou '-' (pausa).
+   cordas vão das mais graves (índice 0) para as mais agudas. */
+function gerarGrade({ afinacao, subgenero, blastBeats }) {
   const cordas = TUNINGS[afinacao] || TUNINGS['Drop B'];
   const SLOTS = 16, MED = 2, total = SLOTS * MED;
   let pat = (SUBGEN[subgenero] || SUBGEN['Death Metal']).pat;
   if (blastBeats) pat = pat.map(() => 1);
+
   const grade = cordas.map(() => Array(total).fill('-'));
   for (let s = 0; s < total; s++) {
     const m = s % SLOTS;
-    if (pat[m]) grade[0][s] = '0';
-    if (m === 0 || m === 8) {
+    if (pat[m]) grade[0][s] = '0';                       // chug na corda grave
+    if (m === 0 || m === 8) {                            // acentos no início das medidas
       const corda = 1 + Math.floor(Math.random() * 2);
       grade[corda][s] = FRETS[Math.floor(Math.random() * FRETS.length)];
     }
     if (Math.random() < 0.08) grade[1][s] = FRETS[Math.floor(Math.random() * FRETS.length)];
   }
+  return { cordas, grade, slots: SLOTS, medidas: MED, total };
+}
+
+/* Renderiza a matriz como tablatura ASCII (aguda no topo, grave embaixo). */
+function renderGrade({ cordas, grade, slots, medidas }) {
   const linhas = [];
   for (let c = cordas.length - 1; c >= 0; c--) {
     const rot = (cordas[c] + ' ').slice(0, 2), partes = [];
-    for (let m = 0; m < MED; m++) partes.push(grade[c].slice(m * SLOTS, (m + 1) * SLOTS).join(''));
+    for (let m = 0; m < medidas; m++) partes.push(grade[c].slice(m * slots, (m + 1) * slots).join(''));
     linhas.push(rot + '|' + partes.join('|') + '|');
   }
   return linhas.join('\n');
 }
 
+function gerar(p) { return renderGrade(gerarGrade(p)); }
+
 /* ---------- Estado ---------- */
 let estado = { afinacao: 'Drop B', bpm: 180, subgenero: 'Death Metal', blastBeats: false };
-let ultimoResultado = null;   // guarda a última resposta (tab, estrutura, audioUrl…)
+let ultimoResultado = null;   // última resposta (tab, estrutura, grade, audioUrl…)
 
 function pintarNotas() {
   $('tuningNotes').innerHTML = TUNINGS[estado.afinacao].map(n => `<span class="note-pill">${n}</span>`).join('');
@@ -76,7 +88,11 @@ function pintarNotas() {
 $('afinacao').addEventListener('change', e => { estado.afinacao = e.target.value; pintarNotas(); });
 
 const bpm = $('bpm');
-function pintarBpm() { estado.bpm = Number(bpm.value); $('bpmOut').textContent = bpm.value; }
+function pintarBpm() {
+  estado.bpm = Number(bpm.value);
+  $('bpmOut').textContent = bpm.value;
+  if (window.Tone) Tone.Transport.bpm.value = estado.bpm;   // segue o andamento ao vivo
+}
 bpm.addEventListener('input', pintarBpm);
 
 $('subgenGrid').innerHTML = Object.keys(SUBGEN).map((k, i) =>
@@ -113,22 +129,21 @@ function payloadAtual() {
   return { afinacao: estado.afinacao, bpm: estado.bpm, subgenero: estado.subgenero, blastBeats: estado.blastBeats, usarIA: false };
 }
 function montarRespostaLocal(p) {
+  const g = gerarGrade(p);
   return {
-    afinacao: { nome: p.afinacao, cordas: TUNINGS[p.afinacao] || TUNINGS['Drop B'] },
+    afinacao: { nome: p.afinacao, cordas: g.cordas },
     bpm: p.bpm,
     subgenero: p.subgenero,
     blastBeats: p.blastBeats,
     estrutura: ESTRUTURAS[p.subgenero] || [],
-    tab: gerar(p),
-    audioUrl: null,   // o back pode devolver a URL de um .mp3 aqui
+    tab: renderGrade(g),
+    grade: g.grade,    // matriz crua, para o player ler corda/casa/pausa
+    audioUrl: null,    // o back pode devolver a URL de um .mp3 aqui
   };
 }
 const delay = (ms) => new Promise(r => setTimeout(r, ms));
 
-/* ---------- Chamada à API (real ou simulada) ----------
-   Sempre devolve o mesmo formato de resposta, venha do back ou do mock,
-   e lança (throw) em caso de falha — quem chama trata no try/catch.
-*/
+/* ---------- Chamada à API (real ou simulada) ---------- */
 async function gerarRiff(payload) {
   if (CONFIG.usarBackend) {
     const ctrl = new AbortController();
@@ -149,7 +164,6 @@ async function gerarRiff(payload) {
       clearTimeout(timer);
     }
   }
-
   // --- Modo demo: simula a latência da rede e gera localmente ---
   await delay(420 + Math.random() * 360);
   if (CONFIG.simularErro) throw new Error('Falha simulada do servidor (500)');
@@ -187,19 +201,18 @@ async function forjar() {
   if (som) { som.currentTime = 0; som.play().catch(() => {}); }
 
   const btn = $('forjar');
-  // estado de carregamento
   btn.disabled = true;
   $('output').style.display = 'none';
   $('forging').classList.add('on');
   $('forgingMsg').textContent = MSGS[Math.floor(Math.random() * MSGS.length)];
 
   try {
-    const data = await gerarRiff(payloadAtual());   // sucesso
+    const data = await gerarRiff(payloadAtual());
     renderResultado(data);
-  } catch (err) {                                   // falha (500/timeout/rede)
+  } catch (err) {
     console.error('[RiffForge] falha ao gerar o riff:', err);
     toast('Não foi possível gerar o riff — ' + (err.message || 'tente novamente'), 'erro');
-  } finally {                                       // sempre restaura a UI
+  } finally {
     $('forging').classList.remove('on');
     $('output').style.display = 'flex';
     btn.disabled = false;
@@ -224,56 +237,114 @@ $('btnExport').addEventListener('click', () => {
 });
 
 /* ============================================================
-   PLAYER — reproduz um .mp3 vindo do back OU lê a tab (Tone.js)
+   ÁUDIO — mapeamento casa→nota + Player com Tone.js (distorção)
    ============================================================ */
+const CROMA = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+
+/* Nota MIDI de cada CORDA SOLTA, a partir dos nomes (graves→agudas).
+   Ancora a corda mais grave numa oitava baixa (~MIDI 33–44, ex.: B1/E2) e
+   sobe cada corda seguinte para o menor MIDI com aquele nome acima da anterior. */
+function midiAbertoDeCordas(cordas) {
+  const pcs = cordas.map(n => { const i = CROMA.indexOf((n || '').trim()); return i < 0 ? 0 : i; });
+  const midis = [];
+  let m = pcs[0]; while (m < 33) m += 12;           // grave mais baixa
+  midis.push(m);
+  for (let i = 1; i < pcs.length; i++) {
+    let x = pcs[i]; while (x <= m) x += 12;          // mantém a ordem ascendente
+    midis.push(x); m = x;
+  }
+  return midis;
+}
+function midiParaNota(midi) { return CROMA[((midi % 12) + 12) % 12] + (Math.floor(midi / 12) - 1); }
+
+/* Lê a MATRIZ (grade[corda][slot]) e devolve a sequência tocável:
+   um passo por slot; cada passo é um array de notas (vazio = pausa '-'). */
+function gradeParaSequencia(grade, cordas) {
+  const midis = midiAbertoDeCordas(cordas);
+  const total = grade[0] ? grade[0].length : 0;
+  const passos = [];
+  for (let col = 0; col < total; col++) {
+    const notas = [];
+    for (let c = 0; c < grade.length; c++) {
+      const cell = grade[c][col];
+      if (cell && cell !== '-') {
+        const casa = parseInt(cell, 10);
+        if (!isNaN(casa)) notas.push(midiParaNota(midis[c] + casa));
+      }
+    }
+    passos.push(notas);
+  }
+  return passos;
+}
+
+/* Fallback: reconstrói a sequência a partir da tab ASCII (ex.: resposta do back
+   que só mandou o texto). As linhas vêm agudas→graves; reordeno para o MIDI. */
+function tabParaSequencia(tab) {
+  if (!tab) return [];
+  const linhas = tab.split('\n');
+  const pcsAgudoGrave = linhas.map(ln => ln.slice(0, 2).trim());
+  const midisGraveAgudo = midiAbertoDeCordas(pcsAgudoGrave.slice().reverse());
+  const midis = midisGraveAgudo.slice().reverse();          // alinha com a ordem das linhas
+  const conteudo = linhas.map(ln => ln.slice(2).replace(/\|/g, ''));
+  const largura = Math.max(0, ...conteudo.map(c => c.length));
+  const passos = [];
+  for (let col = 0; col < largura; col++) {
+    const notas = [];
+    for (let l = 0; l < conteudo.length; l++) {
+      const ch = conteudo[l][col];
+      if (ch && /\d/.test(ch)) {
+        let casa = ch; const prox = conteudo[l][col + 1];
+        if (prox && /\d/.test(prox)) casa += prox;          // casas de 2 dígitos (ex.: 10)
+        notas.push(midiParaNota(midis[l] + parseInt(casa, 10)));
+      }
+    }
+    passos.push(notas);
+  }
+  return passos;
+}
+
 const ICON_PLAY  = '<svg viewBox="0 0 24 24" fill="none"><path d="M7 5l12 7-12 7V5z" fill="currentColor" stroke="none"/></svg> Reproduzir';
 const ICON_PAUSE = '<svg viewBox="0 0 24 24" fill="none"><rect x="6" y="5" width="4" height="14" fill="currentColor" stroke="none"/><rect x="14" y="5" width="4" height="14" fill="currentColor" stroke="none"/></svg> Pausar';
 
-/* Converte a tablatura ASCII gerada numa sequência de notas (ex.: ["B2","E3"…]).
-   É o que um sintetizador (Tone.js) consumiria para "tocar o texto". */
-function tabParaNotas(tab) {
-  if (!tab) return [];
-  const CROMA = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
-  const linhas = tab.split('\n');
-  // nota e oitava-base de cada corda, a partir do rótulo (graves embaixo)
-  const cordas = linhas.map((ln, i) => {
-    const idx = CROMA.indexOf(ln.slice(0, 2).trim());
-    return { idx: idx < 0 ? 0 : idx, oct: 2 + (linhas.length - 1 - i) };
-  });
-  const conteudo = linhas.map(ln => ln.slice(2).replace(/\|/g, ''));
-  const largura = Math.max(0, ...conteudo.map(c => c.length));
-  const seq = [];
-  for (let col = 0; col < largura; col++) {
-    for (let c = 0; c < conteudo.length; c++) {
-      const ch = conteudo[c][col];
-      if (ch && /\d/.test(ch)) {
-        let casa = ch;
-        const prox = conteudo[c][col + 1];
-        if (prox && /\d/.test(prox)) casa += prox;       // casas de 2 dígitos (ex.: 10)
-        const semis = cordas[c].idx + parseInt(casa, 10);
-        seq.push(CROMA[semis % 12] + (cordas[c].oct + Math.floor(semis / 12)));
-      }
-    }
-  }
-  return seq;
-}
-
 const Player = (() => {
-  let tocando = false, audioEl = null, simTimer = null;
+  let tocando = false, audioEl = null;
+  let synth = null, seq = null, cadeiaPronta = false;
+
+  /* Cadeia de áudio: PolySynth (sawtooth) -> Distortion -> Filtro -> Limiter -> saída */
+  function montarCadeia() {
+    if (cadeiaPronta) return;
+    const dist    = new Tone.Distortion(0.8);                 // peso de metal
+    const filtro  = new Tone.Filter(2600, 'lowpass');         // tira a fritura aguda
+    const limiter = new Tone.Limiter(-3);                     // segura o clipping
+    synth = new Tone.PolySynth(Tone.Synth);                   // acordes (chug + acento)
+    synth.set({
+      oscillator: { type: 'sawtooth' },
+      envelope: { attack: 0.005, decay: 0.16, sustain: 0.05, release: 0.08 },
+      volume: -10,
+    });
+    synth.chain(dist, filtro, limiter, Tone.Destination);
+    cadeiaPronta = true;
+  }
 
   function ui(on) {
     tocando = on;
-    $('eq').classList.toggle('on', on);
+    $('eq').classList.toggle('on', on);                       // equalizador anima enquanto toca
     $('btnPlay').innerHTML = on ? ICON_PAUSE : ICON_PLAY;
+  }
+
+  function pararTone() {
+    if (seq) { try { seq.stop(0); seq.dispose(); } catch (e) {} seq = null; }
+    if (window.Tone) { try { Tone.Transport.stop(); Tone.Transport.cancel(0); } catch (e) {} }
+    if (synth) { try { synth.releaseAll(); } catch (e) {} }
   }
 
   function stop() {
     if (audioEl) audioEl.pause();
-    if (simTimer) { clearTimeout(simTimer); simTimer = null; }
+    pararTone();
     ui(false);
   }
 
-  // (1) Caminho real: o back devolveu um .mp3 -> toca o arquivo
+  /* (1) Back devolveu um .mp3 -> toca o arquivo */
   function tocarArquivo(url) {
     if (!audioEl) {
       audioEl = new Audio();
@@ -284,38 +355,34 @@ const Player = (() => {
     audioEl.play().then(() => ui(true)).catch(() => { toast('Reprodução bloqueada pelo navegador', 'erro'); ui(false); });
   }
 
-  // (2) Caminho sintetizado: lê a tab e toca (estrutura pronta p/ Tone.js)
-  function tocarTab(tab) {
-    const notas = tabParaNotas(tab);
+  /* (2) Sintetiza a tablatura com Tone.js, no BPM e com distorção */
+  async function tocarSequencia(passos) {
+    if (!window.Tone) { toast('Áudio indisponível (Tone.js não carregou)', 'erro'); return; }
+    await Tone.start();                                       // libera o áudio (gesto do usuário)
+    montarCadeia();
+    pararTone();
 
-    /* --- INTEGRAÇÃO FUTURA COM Tone.js ---------------------------------
-       Carregue o Tone (CDN) e troque o fallback abaixo por:
-
-         await Tone.start();
-         const synth = new Tone.PluckSynth({ resonance: 0.9 }).toDestination();
-         Tone.Transport.bpm.value = estado.bpm;
-         const seq = new Tone.Sequence((time, n) => {
-           if (n) synth.triggerAttackRelease(n, '16n', time);
-         }, notas, '16n');
-         seq.start(0);
-         Tone.Transport.start();
-       E pare em stop(): seq.dispose(); Tone.Transport.stop();
-       ------------------------------------------------------------------- */
-
-    if (!notas.length) { toast('Nada para tocar ainda', 'erro'); return; }
-
-    // Fallback (sem Tone.js): playback "visual" sincronizado ao andamento.
-    const bpmAtual = estado.bpm || 120;
-    const durMs = (notas.length / 4) * (60 / bpmAtual) * 1000;
+    Tone.Transport.bpm.value = estado.bpm || 120;            // anda no andamento do slider
+    seq = new Tone.Sequence((time, notas) => {
+      if (notas && notas.length) synth.triggerAttackRelease(notas, '16n', time);
+    }, passos, '16n');                                        // 16 slots/medida = semicolcheias
+    seq.loop = true;                                          // riff em loop até pausar
+    seq.start(0);
+    Tone.Transport.start();
     ui(true);
-    simTimer = setTimeout(() => ui(false), Math.min(Math.max(durMs, 1500), 12000));
   }
 
   function toggle() {
     if (tocando) { stop(); return; }
     const r = ultimoResultado;
-    if (r && r.audioUrl) tocarArquivo(r.audioUrl);          // back mandou áudio
-    else tocarTab(r ? r.tab : $('tab').textContent);        // senão, lê a tab
+    if (r && r.audioUrl) { tocarArquivo(r.audioUrl); return; }
+
+    // monta a sequência a partir da MATRIZ (ou da tab como fallback)
+    const cordas = (r && r.afinacao && r.afinacao.cordas) || TUNINGS[estado.afinacao];
+    const passos = (r && r.grade) ? gradeParaSequencia(r.grade, cordas) : tabParaSequencia($('tab').textContent);
+
+    if (!passos.some(p => p.length)) { toast('Nada para tocar ainda', 'erro'); return; }
+    tocarSequencia(passos);
   }
 
   return { toggle, stop };
@@ -335,10 +402,9 @@ pintarBpm();
 renderResultado(montarRespostaLocal(payloadAtual()));
 
 /* ============================================================
-   CAMADA DE MOVIMENTO (smooth scroll + cinética + cursor)
+   CAMADA DE MOVIMENTO (reveals cinéticos + cursor; scroll nativo)
    ============================================================ */
 
-/* split de texto em palavras (máscara que sobe) */
 function split(el) {
   const txt = el.textContent; el.textContent = '';
   txt.split(/(\s+)/).forEach(tok => {
