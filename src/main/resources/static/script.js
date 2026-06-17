@@ -367,10 +367,12 @@ if (!RM) {
   splits.forEach(el => el.classList.add('in'));
 }
 
-/* smooth scroll (Lenis) */
+/* smooth scroll (Lenis) — DESLIGADO: scroll nativo do navegador ("normal").
+   Troque USAR_SMOOTH para true se um dia quiser o scroll suave de volta. */
+const USAR_SMOOTH = false;
 let lenis = null;
-if (!RM && window.Lenis) {
-  lenis = new Lenis({ lerp: 0.19, wheelMultiplier: 1.65, smoothWheel: true });
+if (USAR_SMOOTH && !RM && window.Lenis) {
+  lenis = new Lenis({ lerp: 0.2, wheelMultiplier: 1, smoothWheel: true });
   (function raf(t) { lenis.raf(t); requestAnimationFrame(raf); })();
 }
 function irPara(id) {
