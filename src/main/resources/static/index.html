@@ -66,6 +66,20 @@
 
   <!-- HERO -->
   <header class="hero">
+    <!-- FX cinematográfico: waveform holográfica + calor da forja -->
+    <div class="hero-fx" aria-hidden="true">
+      <span class="waveline w1"></span>
+      <span class="waveline w2"></span>
+      <span class="hero-heat"></span>
+    </div>
+    <!-- HUD: cruzes de marcação + coordenadas + barra lateral -->
+    <span class="xhair xh-tl" aria-hidden="true"></span>
+    <span class="xhair xh-tr" aria-hidden="true"></span>
+    <span class="xhair xh-bl" aria-hidden="true"></span>
+    <span class="xhair xh-br" aria-hidden="true"></span>
+    <span class="hud-coord hud-coord--tr" aria-hidden="true">LAT 41.9028°N · 12.4964°E<br>SECT&nbsp;07 / GRID&nbsp;0xB4</span>
+    <span class="hud-vlabel" aria-hidden="true">SYS//FORGE.ENGINE.v2 — STATUS: ARMED</span>
+
     <div class="wrap">
       <span class="kicker reveal">Gerador de tablaturas · metal</span>
       <h1 data-split>Riffs graves, <em>sem ruído.</em></h1>
@@ -132,44 +146,61 @@
         <p class="reveal">Ajuste os parâmetros. O resultado aparece à direita.</p>
       </div>
 
-      <div class="tool-grid reveal">
-        <!-- controles -->
-        <div class="panel">
-          <span class="panel-label mono-label">Parâmetros</span>
+      <div class="console reveal">
+        <span class="xhair xh-tl" aria-hidden="true"></span>
+        <span class="xhair xh-tr" aria-hidden="true"></span>
+        <span class="xhair xh-bl" aria-hidden="true"></span>
+        <span class="xhair xh-br" aria-hidden="true"></span>
+        <div class="console-bar">
+          <span class="console-leds"><i></i><i></i><i></i></span>
+          <span class="console-model">RF-01 · Forge Console</span>
+          <span class="tubes" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+          <span class="console-coord">CH.01 / 16-STEP · GAIN&nbsp;0.8 · POS&nbsp;X128&nbsp;Y044</span>
+          <span class="barcode" aria-hidden="true"></span>
+        </div>
+        <div class="tool-grid">
+        <!-- CONTROLES — bento cockpit -->
+        <div class="panel ctrl">
+          <span class="panel-label mono-label">IN — Parâmetros<b class="pl-tag">[ 04 PARAM ]</b></span>
 
-          <div class="field">
-            <label for="afinacao">Afinação</label>
-            <select id="afinacao">
-              <option>Drop B</option><option>Drop A</option><option>Drop C</option><option>Standard E</option>
-            </select>
-            <div class="tuning-notes" id="tuningNotes"></div>
-          </div>
-
-          <div class="field">
-            <div class="bpm-head">
-              <label for="bpm" style="margin:0">Andamento</label>
-              <span class="bpm-val"><span id="bpmOut">180</span><small> BPM</small></span>
+          <div class="bento">
+            <div class="cell cell-tune">
+              <label for="afinacao">Afinação<span class="cell-id">/A1</span></label>
+              <select id="afinacao">
+                <option>Drop B</option><option>Drop A</option><option>Drop C</option><option>Standard E</option>
+              </select>
+              <div class="tuning-notes" id="tuningNotes"></div>
             </div>
-            <input type="range" id="bpm" min="80" max="280" value="180" step="2"
-                   style="--fill:50%"
-                   oninput="this.style.setProperty('--fill', ((this.value - this.min) / (this.max - this.min) * 100) + '%')">
-          </div>
 
-          <div class="field">
-            <label>Subgênero</label>
-            <div class="subgen-grid" id="subgenGrid"></div>
-          </div>
+            <div class="cell cell-bpm">
+              <div class="bpm-head">
+                <label for="bpm" style="margin:0">Andamento<span class="cell-id">/A2</span></label>
+              </div>
+              <span class="bpm-val"><span id="bpmOut">180</span><small> BPM</small></span>
+              <input type="range" id="bpm" min="80" max="280" value="180" step="2"
+                     style="--fill:50%"
+                     oninput="this.style.setProperty('--fill', ((this.value - this.min) / (this.max - this.min) * 100) + '%')">
+            </div>
 
-          <div class="field toggle-row">
-            <label style="margin:0">Blast beats</label>
-            <div class="toggle" id="blast" role="switch" tabindex="0" aria-checked="false" aria-label="Blast beats"></div>
-          </div>
+            <div class="cell cell-sub">
+              <label>Subgênero<span class="cell-id">/B1 · SELECT</span></label>
+              <div class="subgen-grid" id="subgenGrid"></div>
+            </div>
 
-          <button class="btn-forge" id="forjar">Forjar riff</button>
+            <div class="cell cell-blast toggle-row">
+              <label style="margin:0">Blast beats<span class="cell-id">/B2</span></label>
+              <div class="toggle" id="blast" role="switch" tabindex="0" aria-checked="false" aria-label="Blast beats"></div>
+            </div>
+
+            <div class="cell cell-forge">
+              <button class="btn-forge" id="forjar">Forjar riff <span class="bf-tag">⏎ EXEC</span></button>
+            </div>
+          </div>
         </div>
 
-        <!-- resultado -->
+        <!-- RESULTADO — terminal -->
         <div class="panel result">
+          <span class="panel-label mono-label">OUT — Saída<b class="pl-tag pl-tag--acc">[ TTY/01 ]</b></span>
           <div class="result-head">
             <h3>Riff gerado</h3>
             <div class="eq" id="eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
@@ -183,6 +214,8 @@
           </div>
 
           <div id="output" style="display:flex; flex-direction:column; flex:1;">
+            <div class="spectrum" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            <div class="term-prompt" aria-hidden="true"><span class="tp-user">forge@rf-01</span><span class="tp-sep">:</span><span class="tp-path">~/riff</span><span class="tp-dollar">$</span> render --ascii<span class="tp-caret"></span></div>
             <div class="structure" id="structure"></div>
             <div class="tab-wrap"><pre class="tab" id="tab"></pre></div>
             <div class="toolbar">
@@ -193,6 +226,7 @@
             </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   </section>
@@ -236,6 +270,7 @@
       </div>
       <div class="foot-bottom">
         <span>© 2026 RiffForge</span>
+        <span class="foot-hud" aria-hidden="true"><b class="barcode barcode--sm"></b> SN·RF01-7740 / BUILD&nbsp;2026.06 / 41.90N·12.49E</span>
         <span>HTML · CSS · JS / Java no motor</span>
       </div>
     </div>
