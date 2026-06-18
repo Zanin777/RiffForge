@@ -10,9 +10,9 @@
 
 Faça sempre esses 4 passos, em ordem:
 
-1. [ ] Abrir o projeto na IDE e rodar (`▶ Run` ou `mvnw spring-boot:run`) pra confirmar que está tudo de pé.
-2. [ ] Fazer **só a tarefa da sessão** — sem desviar pra "só mais essa featurezinha".
-3. [ ] Testar (curl, navegador, ou um `main` de teste) e confirmar o "✅ feito quando".
+1. [x] Abrir o projeto na IDE e rodar (`▶ Run` ou `mvnw spring-boot:run`) pra confirmar que está tudo de pé.
+2. [x] Fazer **só a tarefa da sessão** — sem desviar pra "só mais essa featurezinha".
+3. [x] Testar (curl, navegador, ou um `main` de teste) e confirmar o "✅ feito quando".
 4. [ ] Commitar: `git add .` → `git commit -m "..."` → `git push`.
 
 > Dica de commit: mensagens curtas no presente, tipo `add conversão afinação para MIDI`. Commit pequeno e frequente é seu amigo — facilita voltar atrás quando algo quebra.
