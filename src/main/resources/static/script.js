@@ -477,3 +477,53 @@ if (fino && !RM) {
     el.addEventListener('mouseleave', () => ring.classList.remove('grow'));
   });
 }
+
+/* ============================================================
+   CAPA CINEMATOGRÁFICA — partículas digitais + fade do fundo
+   ============================================================ */
+(function cine() {
+  const bg = document.getElementById('cine-bg');
+  if (!bg) return;
+
+  const cv = document.getElementById('cine-particles');
+  const c = cv ? cv.getContext('2d') : null;
+  let parts = [], raf = 0, rodando = false;
+
+  function criar() {
+    parts = [];
+    const n = Math.min(90, Math.floor((cv.width * cv.height) / 16000));
+    for (let i = 0; i < n; i++) parts.push({
+      x: Math.random() * cv.width, y: Math.random() * cv.height,
+      vx: (Math.random() - 0.5) * 0.4, vy: (Math.random() - 0.5) * 0.4,
+      s: Math.random() * 2 + 1, o: Math.random() * 0.4 + 0.08,
+      az: Math.random() < 0.22   // ~1/5 na cor de acento (azul)
+    });
+  }
+  function resize() { cv.width = innerWidth; cv.height = innerHeight; criar(); }
+  function tick() {
+    c.clearRect(0, 0, cv.width, cv.height);
+    for (const p of parts) {
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < 0) p.x = cv.width; else if (p.x > cv.width) p.x = 0;
+      if (p.y < 0) p.y = cv.height; else if (p.y > cv.height) p.y = 0;
+      c.fillStyle = p.az ? `rgba(111,134,255,${p.o})` : `rgba(255,255,255,${p.o})`;
+      c.fillRect(p.x, p.y, p.s, p.s);   // quadrados (estilo digital)
+    }
+    raf = requestAnimationFrame(tick);
+  }
+  function start() { if (!rodando && c && !RM) { rodando = true; tick(); } }
+  function stop()  { if (rodando) { rodando = false; cancelAnimationFrame(raf); } }
+
+  // fade do fundo ao deixar o hero (não vaza pra ferramenta)
+  function fade() {
+    const o = Math.max(0, 1 - scrollY / (innerHeight * 0.85));
+    bg.style.opacity = o;
+    if (o <= 0.01) { bg.style.visibility = 'hidden'; stop(); }
+    else { bg.style.visibility = 'visible'; start(); }
+  }
+
+  if (c && !RM) { resize(); addEventListener('resize', resize); }
+  addEventListener('scroll', fade, { passive: true });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) stop(); else if (scrollY < innerHeight * 0.85) start(); });
+  fade();
+})();

@@ -49,6 +49,14 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- ===== CAPA CINEMATOGRÁFICA: vídeo de guitarra em loop (decorativo) ===== -->
+  <div id="cine-bg" aria-hidden="true">
+    <video id="cine-video" autoplay muted loop playsinline preload="auto"
+           src="https://assets.mixkit.co/videos/preview/mixkit-playing-an-electric-guitar-close-up-1644-large.mp4"></video>
+    <div class="cine-overlay"></div>
+    <canvas id="cine-particles"></canvas>
+  </div>
+
   <div class="cursor" aria-hidden="true"></div>
   <div class="cursor-ring" aria-hidden="true"></div>
 
@@ -87,6 +95,9 @@
       <div class="hero-actions reveal">
         <button class="link-arrow" data-target="forja">Forjar um riff <span class="ar">→</span></button>
         <button class="link-muted" data-target="como">Ver o processo</button>
+      </div>
+      <div class="hero-chip reveal" aria-label="especificação">
+        <span class="hc-prompt">&gt;</span> drop b → c# · 16-step · <b>tone.js no navegador</b>
       </div>
       <div class="hero-foot reveal">
         <span class="idx">001 — Máquina determinística</span>

@@ -579,3 +579,34 @@ input[type=range] { background: linear-gradient(to right, var(--ember) 0, var(--
   .cursor, .cursor-ring { display: none; }
   .tab-wrap { box-shadow: inset -28px 0 22px -22px rgba(0,0,0,0.9); }
 }
+
+/* ============================================================
+   CAPA CINEMATOGRÁFICA — vídeo de guitarra em loop atrás do hero
+   (fade ao sair do hero; identidade Forge Console preservada)
+   ============================================================ */
+#cine-bg { position: fixed; inset: 0; z-index: -2; pointer-events: none; background: var(--screen); will-change: opacity, visibility; }
+#cine-bg video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: grayscale(100%) contrast(1.15) brightness(0.42); }
+#cine-bg canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+#cine-bg .cine-overlay {
+  position: absolute; inset: 0;
+  background:
+    linear-gradient(to top, var(--bg) 3%, transparent 42%, transparent 66%, rgba(10,10,11,0.45)),
+    radial-gradient(125% 80% at 50% 28%, transparent 38%, rgba(6,6,8,0.72));
+}
+#cine-bg .cine-overlay::after {
+  content: ""; position: absolute; inset: 0; opacity: 0.5; mix-blend-mode: screen;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.022) 1px, transparent 1px);
+  background-size: 34px 34px;
+}
+@media (prefers-reduced-motion: reduce) { #cine-bg video { display: none; } }
+
+/* chip "spec" no hero — eco honesto do code-box da referência */
+.hero-chip {
+  display: inline-flex; align-items: center; gap: 8px; margin-top: 22px;
+  font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-2);
+  background: rgba(6,6,8,0.55); border: 1px solid var(--line-2); padding: 9px 14px; backdrop-filter: blur(4px);
+}
+.hero-chip .hc-prompt { color: var(--acc-hi); font-weight: 700; }
+.hero-chip b { color: var(--fg); font-weight: 600; }
